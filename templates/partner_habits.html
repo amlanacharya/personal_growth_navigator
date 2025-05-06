@@ -1,17 +1,12 @@
-<!-- templates/habits.html -->
+<!-- templates/partner_habits.html -->
 {% extends "base.html" %}
 
 {% block content %}
 <div class="container-fluid px-4 fade-in">
     <div class="row mb-4">
         <div class="col">
-            <h1 class="h3 mb-0 text-gray-800">Your Habits</h1>
-            <p class="mb-4">Track daily habits that support your long-term goals.</p>
-        </div>
-        <div class="col-auto">
-            <a href="{{ url_for('add_habit') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Add New Habit
-            </a>
+            <h1 class="h3 mb-0 text-gray-800">{{ partner[3] }}'s Habits</h1>
+            <p class="mb-4">View your partner's habits and progress to motivate each other.</p>
         </div>
     </div>
 
@@ -20,7 +15,7 @@
         <div class="col-xl-8 col-lg-7">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold">Active Habits</h6>
+                    <h6 class="m-0 font-weight-bold">{{ partner[3] }}'s Active Habits</h6>
                 </div>
                 <div class="card-body">
                     {% if habits %}
@@ -32,40 +27,43 @@
                                         <th>Related Goal</th>
                                         <th>Frequency</th>
                                         <th>Current Streak</th>
-                                        <th>Today</th>
+                                        <th>Today's Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for habit in habits %}
                                         <tr>
-                                            <td>{{ habit[1] }}</td>
+                                            <td>{{ habit[2] }}</td>
                                             <td>
-                                                {% if habit[7] %}
-                                                    {{ habit[7] }}
+                                                {% if habit[8] %}
+                                                    {{ habit[8] }}
                                                 {% else %}
                                                     <span class="text-muted">None</span>
                                                 {% endif %}
                                             </td>
-                                            <td>{{ habit[3]|capitalize }}</td>
+                                            <td>{{ habit[4]|capitalize }}</td>
                                             <td>
-                                                <span class="badge bg-primary">{{ habit[4]|int }} days</span>
+                                                <span class="badge bg-primary">{{ habit[5]|int }} days</span>
                                             </td>
                                             <td>
-                                                <form action="{{ url_for('log_habit', id=habit[0]) }}" method="post" class="d-inline">
-                                                    {% set is_completed = false %}
-                                                    {% for habit_id, dates in calendar_data.items() %}
-                                                        {% if habit_id|string == habit[0]|string and dates is defined and dates|length > 0 %}
-                                                            {% if today in dates %}
-                                                                {% set is_completed = true %}
-                                                            {% endif %}
+                                                {% set is_completed = false %}
+                                                {% for habit_id, dates in calendar_data.items() %}
+                                                    {% if habit_id|string == habit[0]|string and dates is defined and dates|length > 0 %}
+                                                        {% if today in dates %}
+                                                            {% set is_completed = true %}
                                                         {% endif %}
-                                                    {% endfor %}
-                                                    <input type="hidden" name="completed" value="{{ 'false' if is_completed else 'true' }}">
-                                                    <button type="submit" class="btn btn-sm {{ 'btn-success' if is_completed else 'btn-outline-secondary' }}">
-                                                        <i class="fas {{ 'fa-check' if is_completed else 'fa-circle' }}"></i>
-                                                        {{ 'Completed' if is_completed else 'Mark Complete' }}
-                                                    </button>
-                                                </form>
+                                                    {% endif %}
+                                                {% endfor %}
+
+                                                {% if is_completed %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check"></i> Completed
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">
+                                                        <i class="fas fa-circle"></i> Not Completed
+                                                    </span>
+                                                {% endif %}
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -77,10 +75,7 @@
                             <div class="mb-3">
                                 <i class="fas fa-chart-line fa-3x text-gray-300"></i>
                             </div>
-                            <p>You don't have any habits yet. Start by adding one!</p>
-                            <a href="{{ url_for('add_habit') }}" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Add First Habit
-                            </a>
+                            <p>{{ partner[3] }} doesn't have any habits yet.</p>
                         </div>
                     {% endif %}
                 </div>
@@ -91,19 +86,19 @@
         <div class="col-xl-4 col-lg-5">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold">Habit Streaks</h6>
+                    <h6 class="m-0 font-weight-bold">{{ partner[3] }}'s Habit Streaks</h6>
                 </div>
                 <div class="card-body">
                     {% if habits %}
                         <div class="habit-streaks">
                             {% for habit in habits %}
                                 <div class="mb-4">
-                                    <h6>{{ habit[1] }}</h6>
+                                    <h6>{{ habit[2] }}</h6>
                                     <div class="progress mb-1">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (habit[4]|int / 30) * 100 if habit[4]|int < 30 else 100 }}%" aria-valuenow="{{ habit[4]|int }}" aria-valuemin="0" aria-valuemax="30"></div>
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (habit[5]|int / 30) * 100 if habit[5]|int < 30 else 100 }}%" aria-valuenow="{{ habit[5]|int }}" aria-valuemin="0" aria-valuemax="30"></div>
                                     </div>
                                     <div class="d-flex justify-content-between small text-muted">
-                                        <div>Current streak: {{ habit[4]|int }} days</div>
+                                        <div>Current streak: {{ habit[5]|int }} days</div>
                                         <div>Goal: 30 days</div>
                                     </div>
                                 </div>
@@ -115,8 +110,26 @@
                         <h6 class="mb-3">Consistency Calendar</h6>
                         <div id="habit-calendar"></div>
                     {% else %}
-                        <p class="text-center py-4 text-muted">Add habits to track your streaks</p>
+                        <p class="text-center py-4 text-muted">No habits to track</p>
                     {% endif %}
+                </div>
+            </div>
+
+            <!-- Motivational Message Card -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Send Encouragement</h6>
+                </div>
+                <div class="card-body">
+                    <form action="#" method="post" class="mb-3">
+                        <div class="mb-3">
+                            <textarea class="form-control" rows="3" placeholder="Write a motivational message to your partner..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                    <div class="text-center text-muted small">
+                        <p>Encourage your partner to keep up with their habits!</p>
+                    </div>
                 </div>
             </div>
         </div>
