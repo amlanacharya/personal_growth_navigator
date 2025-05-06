@@ -1,0 +1,156 @@
+<!-- templates/welcome.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 fade-in">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0 text-gray-800">Welcome to Your Growth Journey!</h1>
+            <p class="mb-4">Let's set up your personal growth navigator to help you achieve your goals.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card shadow border-success">
+                <div class="card-header py-3 bg-success text-white">
+                    <h6 class="m-0 font-weight-bold"><i class="fas fa-robot me-2"></i> AI-Powered Growth Navigator</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4>Get Your Personalized Growth Roadmap</h4>
+                            <p>Our AI-powered Growth Navigator can help you create a customized roadmap for your personal and professional growth journey.</p>
+                            <ul>
+                                <li>Answer a few questions about your goals and current situation</li>
+                                <li>Receive personalized recommendations for habits and routines</li>
+                                <li>Get a structured plan to achieve your goals</li>
+                                <li>Save and track your progress over time</li>
+                            </ul>
+                            <div class="mt-4">
+                                <a href="{{ url_for('ai_roadmap') }}" class="btn btn-success btn-lg">
+                                    <i class="fas fa-robot me-2"></i> Get Your AI Roadmap Now
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <img src="https://cdn-icons-png.flaticon.com/512/4616/4616734.png" alt="AI Roadmap" style="max-width: 200px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Manual Setup Options</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-4">
+                            <div class="p-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-bullseye fa-3x text-primary"></i>
+                                </div>
+                                <h5>1. Set Your Goals</h5>
+                                <p class="text-muted">Define what you want to achieve in different areas of your life.</p>
+                                <a href="{{ url_for('add_goal') }}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Add Your First Goal
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center mb-4">
+                            <div class="p-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-calendar-alt fa-3x text-success"></i>
+                                </div>
+                                <h5>2. Create Daily Routines</h5>
+                                <p class="text-muted">Design your ideal day with activities that align with your energy levels.</p>
+                                <a href="{{ url_for('add_routine') }}" class="btn btn-success">
+                                    <i class="fas fa-plus"></i> Add Your First Routine
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center mb-4">
+                            <div class="p-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-chart-line fa-3x text-warning"></i>
+                                </div>
+                                <h5>3. Build Consistent Habits</h5>
+                                <p class="text-muted">Track daily habits that support your long-term goals.</p>
+                                <a href="{{ url_for('add_habit') }}" class="btn btn-warning">
+                                    <i class="fas fa-plus"></i> Add Your First Habit
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">How It Works</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <h5><i class="fas fa-bullseye text-primary me-2"></i> Goals</h5>
+                            <p>Goals are the big achievements you're working towards. They can be in any area of your life:</p>
+                            <ul>
+                                <li>Physical Fitness</li>
+                                <li>Professional Development</li>
+                                <li>Learning</li>
+                                <li>Relationships</li>
+                                <li>Personal Projects</li>
+                            </ul>
+                            <p>Each goal has a category, description, deadline, and priority level.</p>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <h5><i class="fas fa-calendar-alt text-success me-2"></i> Routines</h5>
+                            <p>Routines help you structure your day for maximum productivity and well-being:</p>
+                            <ul>
+                                <li>Create time blocks for different activities</li>
+                                <li>Assign energy levels (High, Medium, Low)</li>
+                                <li>Schedule activities for specific days of the week</li>
+                                <li>Balance work, rest, and personal time</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <h5><i class="fas fa-chart-line text-warning me-2"></i> Habits</h5>
+                            <p>Habits are the daily actions that move you toward your goals:</p>
+                            <ul>
+                                <li>Link habits to specific goals</li>
+                                <li>Track your daily completion</li>
+                                <li>Build streaks for consistency</li>
+                                <li>View your progress over time</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <h5><i class="fas fa-chart-pie text-danger me-2"></i> Analytics</h5>
+                            <p>The analytics dashboard helps you understand your progress:</p>
+                            <ul>
+                                <li>See habit completion rates</li>
+                                <li>Track your current streaks</li>
+                                <li>Analyze your energy distribution</li>
+                                <li>Identify patterns and areas for improvement</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
