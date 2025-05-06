@@ -1,0 +1,170 @@
+<!-- templates/routines.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 fade-in">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0 text-gray-800">Daily Routines</h1>
+            <p class="mb-4">Manage your daily schedule to align with your energy patterns and goals.</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('add_routine') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Routine Activity
+            </a>
+        </div>
+    </div>
+
+    <!-- Weekday Tabs -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <ul class="nav nav-tabs card-header-tabs" id="weekdayTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="monday-tab" data-bs-toggle="tab" data-bs-target="#monday" type="button" role="tab" aria-controls="monday" aria-selected="true">Monday</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tuesday-tab" data-bs-toggle="tab" data-bs-target="#tuesday" type="button" role="tab" aria-controls="tuesday" aria-selected="false">Tuesday</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="wednesday-tab" data-bs-toggle="tab" data-bs-target="#wednesday" type="button" role="tab" aria-controls="wednesday" aria-selected="false">Wednesday</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="thursday-tab" data-bs-toggle="tab" data-bs-target="#thursday" type="button" role="tab" aria-controls="thursday" aria-selected="false">Thursday</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="friday-tab" data-bs-toggle="tab" data-bs-target="#friday" type="button" role="tab" aria-controls="friday" aria-selected="false">Friday</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="saturday-tab" data-bs-toggle="tab" data-bs-target="#saturday" type="button" role="tab" aria-controls="saturday" aria-selected="false">Saturday</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="sunday-tab" data-bs-toggle="tab" data-bs-target="#sunday" type="button" role="tab" aria-controls="sunday" aria-selected="false">Sunday</button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content" id="weekdayTabsContent">
+                {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+                    <div class="tab-pane fade {{ 'show active' if day == 'Monday' else '' }}" id="{{ day|lower }}" role="tabpanel" aria-labelledby="{{ day|lower }}-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Time Block</th>
+                                        <th>Activity</th>
+                                        <th>Duration</th>
+                                        <th>Energy Level</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for routine in routines %}
+                                        {% if day in routine[5].split(',') %}
+                                            <tr>
+                                                <td>{{ routine[1] }}</td>
+                                                <td>{{ routine[2] }}</td>
+                                                <td>
+                                                    {% if routine[3]|int > 0 %}
+                                                        {{ routine[3]|int }} minutes
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-{{ 'success' if routine[4] == 'High' else 'warning' if routine[4] == 'Medium' else 'secondary' }}">
+                                                        {{ routine[4] }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <a href="{{ url_for('edit_routine', id=routine[0]) }}" class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Energy chart for this day -->
+                        <div class="mt-4">
+                            <h5>Energy Distribution</h5>
+                            <canvas id="{{ day|lower }}_energy_chart" height="100"></canvas>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+        weekdays.forEach(day => {
+            const energyData = {
+                high: 0,
+                medium: 0,
+                low: 0
+            };
+
+            const routines = [
+                {% for routine in routines %}
+                {
+                    days: "{{ routine[5] }}",
+                    energy: "{{ routine[4] }}",
+                    duration: {{ routine[3]|int }}
+                },
+                {% endfor %}
+            ];
+
+            // Calculate energy distribution for this day
+            routines.forEach(routine => {
+                if (routine.days.includes(day.charAt(0).toUpperCase() + day.slice(1))) {
+                    if (routine.energy === 'High') {
+                        energyData.high += routine.duration;
+                    } else if (routine.energy === 'Medium') {
+                        energyData.medium += routine.duration;
+                    } else {
+                        energyData.low += routine.duration;
+                    }
+                }
+            });
+
+            // Create chart
+            const ctx = document.getElementById(`${day}_energy_chart`).getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['High Energy', 'Medium Energy', 'Low Energy'],
+                    datasets: [{
+                        data: [energyData.high, energyData.medium, energyData.low],
+                        backgroundColor: ['#1cc88a', '#f6c23e', '#e7e7e7'],
+                        hoverBorderColor: "rgba(234, 236, 244, 1)",
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    tooltips: {
+                        callbacks: {
+                            label: function(tooltipItem, data) {
+                                const value = data.datasets[0].data[tooltipItem.index];
+                                const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${data.labels[tooltipItem.index]}: ${value} min (${percentage}%)`;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

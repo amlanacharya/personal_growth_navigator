@@ -1,0 +1,324 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Growth Navigator</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #1cc88a;
+            --accent-color: #f6c23e;
+            --danger-color: #e74a3b;
+            --dark-color: #5a5c69;
+            --light-color: #f8f9fc;
+        }
+        
+        body {
+            background-color: #f8f9fc;
+            font-family: 'Nunito', 'Segoe UI', sans-serif;
+        }
+        
+        .sidebar {
+            background: linear-gradient(180deg, var(--primary-color) 10%, #224abe 100%);
+            min-height: 100vh;
+            position: fixed;
+            z-index: 1;
+            padding-top: 20px;
+            width: 225px;
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+            border-radius: 0;
+        }
+        
+        .sidebar .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .sidebar .nav-link i {
+            margin-right: 0.5rem;
+        }
+        
+        .sidebar-brand {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            padding: 0.5rem 1rem;
+        }
+        
+        .content-wrapper {
+            margin-left: 225px;
+            padding: 30px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 .15rem 1.75rem 0 rgba(58,59,69,.15);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid #e3e6f0;
+            font-weight: 700;
+            color: var(--dark-color);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-success {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-warning {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .progress {
+            height: 10px;
+            margin-top: 5px;
+        }
+        
+        .high-energy {
+            background-color: var(--secondary-color);
+        }
+        
+        .medium-energy {
+            background-color: var(--accent-color);
+        }
+        
+        .low-energy {
+            background-color: #e7e7e7;
+        }
+        
+        .routine-block {
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border-left: 5px solid;
+        }
+        
+        .routine-block.high {
+            border-left-color: var(--secondary-color);
+            background-color: rgba(28, 200, 138, 0.1);
+        }
+        
+        .routine-block.medium {
+            border-left-color: var(--accent-color);
+            background-color: rgba(246, 194, 62, 0.1);
+        }
+        
+        .routine-block.low {
+            border-left-color: #e7e7e7;
+            background-color: rgba(231, 231, 231, 0.3);
+        }
+        
+        .habit-check {
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .habit-check.completed {
+            color: var(--secondary-color);
+        }
+        
+        .habit-check:not(.completed) {
+            color: #ccc;
+        }
+        
+        .goal-card {
+            transition: transform 0.3s ease;
+        }
+        
+        .goal-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .goal-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        
+        .habit-calendar td {
+            width: 25px;
+            height: 25px;
+            text-align: center;
+            padding: 2px;
+        }
+        
+        .habit-calendar .completed-day {
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 4px;
+        }
+        
+        /* Analytics page styles */
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.5s;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* For the dashboard stat cards */
+        .stat-card {
+            border-left: 4px solid;
+            padding: 20px;
+            box-shadow: 0 .15rem 1.75rem 0 rgba(58,59,69,.15);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            word-wrap: break-word;
+            background-color: #fff;
+            background-clip: border-box;
+            border-radius: 0.35rem;
+        }
+        
+        .stat-card.primary {
+            border-left-color: var(--primary-color);
+        }
+        
+        .stat-card.success {
+            border-left-color: var(--secondary-color);
+        }
+        
+        .stat-card.warning {
+            border-left-color: var(--accent-color);
+        }
+        
+        .stat-card.danger {
+            border-left-color: var(--danger-color);
+        }
+        
+        .stat-card .heading {
+            text-transform: uppercase;
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 0.7rem;
+        }
+        
+        .stat-card .value {
+            color: var(--dark-color);
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 0;
+        }
+        
+        .stat-card .icon {
+            color: #dddfeb;
+            font-size: 2rem;
+            position: absolute;
+            right: 20px;
+            top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fas fa-mountain"></i> Growth Navigator
+            </div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{{ url_for('index') }}">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if '/goals' in request.path %}active{% endif %}" href="{{ url_for('view_goals') }}">
+                        <i class="fas fa-bullseye"></i> Goals
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if '/routines' in request.path %}active{% endif %}" href="{{ url_for('view_routines') }}">
+                        <i class="fas fa-calendar-alt"></i> Routines
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if '/habits' in request.path %}active{% endif %}" href="{{ url_for('view_habits') }}">
+                        <i class="fas fa-chart-line"></i> Habits
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if '/analytics' in request.path %}active{% endif %}" href="{{ url_for('analytics') }}">
+                        <i class="fas fa-chart-pie"></i> Analytics
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Content -->
+        <div class="content-wrapper">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom JS -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

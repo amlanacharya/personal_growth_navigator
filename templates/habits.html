@@ -1,0 +1,238 @@
+<!-- templates/habits.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 fade-in">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0 text-gray-800">Your Habits</h1>
+            <p class="mb-4">Track daily habits that support your long-term goals.</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('add_habit') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add New Habit
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Habits List -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Active Habits</h6>
+                </div>
+                <div class="card-body">
+                    {% if habits %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Habit</th>
+                                        <th>Related Goal</th>
+                                        <th>Frequency</th>
+                                        <th>Current Streak</th>
+                                        <th>Today</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for habit in habits %}
+                                        <tr>
+                                            <td>{{ habit[1] }}</td>
+                                            <td>
+                                                {% if habit[7] %}
+                                                    {{ habit[7] }}
+                                                {% else %}
+                                                    <span class="text-muted">None</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ habit[3]|capitalize }}</td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ habit[4]|int }} days</span>
+                                            </td>
+                                            <td>
+                                                <form action="{{ url_for('log_habit', id=habit[0]) }}" method="post" class="d-inline">
+                                                    {% set is_completed = false %}
+                                                    {% for habit_id, dates in calendar_data|tojson|fromjson.items() %}
+                                                        {% if habit_id|int == habit[0]|int and dates is defined and dates|length > 0 %}
+                                                            {% if today in dates %}
+                                                                {% set is_completed = true %}
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    <input type="hidden" name="completed" value="{{ 'false' if is_completed else 'true' }}">
+                                                    <button type="submit" class="btn btn-sm {{ 'btn-success' if is_completed else 'btn-outline-secondary' }}">
+                                                        <i class="fas {{ 'fa-check' if is_completed else 'fa-circle' }}"></i>
+                                                        {{ 'Completed' if is_completed else 'Mark Complete' }}
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <div class="mb-3">
+                                <i class="fas fa-chart-line fa-3x text-gray-300"></i>
+                            </div>
+                            <p>You don't have any habits yet. Start by adding one!</p>
+                            <a href="{{ url_for('add_habit') }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add First Habit
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Habit Calendar View -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Habit Streaks</h6>
+                </div>
+                <div class="card-body">
+                    {% if habits %}
+                        <div class="habit-streaks">
+                            {% for habit in habits %}
+                                <div class="mb-4">
+                                    <h6>{{ habit[1] }}</h6>
+                                    <div class="progress mb-1">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (habit[4]|int / 30) * 100 if habit[4]|int < 30 else 100 }}%" aria-valuenow="{{ habit[4]|int }}" aria-valuemin="0" aria-valuemax="30"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between small text-muted">
+                                        <div>Current streak: {{ habit[4]|int }} days</div>
+                                        <div>Goal: 30 days</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <hr>
+
+                        <h6 class="mb-3">Consistency Calendar</h6>
+                        <div id="habit-calendar"></div>
+                    {% else %}
+                        <p class="text-center py-4 text-muted">Add habits to track your streaks</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Habits data from server
+        const calendarData = {{ calendar_data|safe }};
+
+        // Create habit heat map calendar
+        if (document.getElementById('habit-calendar')) {
+            const habitIds = Object.keys(calendarData);
+            if (habitIds.length > 0) {
+                // Generate last 30 days
+                const today = new Date();
+                const calendarDays = [];
+
+                for (let i = 29; i >= 0; i--) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - i);
+                    const dateString = date.toISOString().split('T')[0];
+
+                    const dayEntry = {
+                        date: dateString,
+                        day: date.getDate(),
+                        month: date.toLocaleString('default', { month: 'short' }),
+                        completedHabits: 0
+                    };
+
+                    // Count habits completed on this day
+                    habitIds.forEach(habitId => {
+                        if (calendarData[habitId] && calendarData[habitId].includes(dateString)) {
+                            dayEntry.completedHabits++;
+                        }
+                    });
+
+                    calendarDays.push(dayEntry);
+                }
+
+                // Build calendar HTML
+                let calendarHTML = '<div class="habit-calendar-wrapper">';
+
+                // Group by 7 days per week
+                for (let week = 0; week < 5; week++) {
+                    calendarHTML += '<div class="d-flex mb-1">';
+
+                    for (let day = 0; day < 7; day++) {
+                        const dayIndex = week * 7 + day;
+                        if (dayIndex < calendarDays.length) {
+                            const dayData = calendarDays[dayIndex];
+                            const intensity = dayData.completedHabits / habitIds.length;
+
+                            let bgColor = 'bg-light';
+                            if (intensity > 0) {
+                                if (intensity < 0.5) bgColor = 'bg-success-light';
+                                else if (intensity < 0.8) bgColor = 'bg-success-medium';
+                                else bgColor = 'bg-success';
+                            }
+
+                            calendarHTML += `
+                                <div class="calendar-day ${bgColor}"
+                                    data-bs-toggle="tooltip"
+                                    title="${dayData.month} ${dayData.day}: ${dayData.completedHabits} habits completed">
+                                    <small>${dayData.day}</small>
+                                </div>`;
+                        } else {
+                            calendarHTML += '<div class="calendar-day"></div>';
+                        }
+                    }
+
+                    calendarHTML += '</div>';
+                }
+
+                calendarHTML += '</div>';
+
+                document.getElementById('habit-calendar').innerHTML = calendarHTML;
+
+                // Calendar style
+                const calendarStyle = document.createElement('style');
+                calendarStyle.innerHTML = `
+                    .habit-calendar-wrapper {
+                        margin-top: 10px;
+                    }
+                    .calendar-day {
+                        width: 30px;
+                        height: 30px;
+                        margin: 2px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 4px;
+                    }
+                    .bg-success-light {
+                        background-color: rgba(28, 200, 138, 0.3);
+                    }
+                    .bg-success-medium {
+                        background-color: rgba(28, 200, 138, 0.6);
+                    }
+                    .bg-success {
+                        background-color: rgba(28, 200, 138, 1);
+                        color: white;
+                    }
+                `;
+                document.head.appendChild(calendarStyle);
+
+                // Initialize tooltips
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

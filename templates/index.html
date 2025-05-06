@@ -1,0 +1,197 @@
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 fade-in">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0 text-gray-800">Personal Growth Dashboard</h1>
+            <p class="mb-4">Welcome to your personal growth journey! Here's your progress at a glance.</p>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row mb-4 slide-in">
+        <!-- Active Goals -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card primary">
+                <div class="heading">Active Goals</div>
+                <div class="value">{{ goals|length }}</div>
+                <div class="icon"><i class="fas fa-bullseye"></i></div>
+            </div>
+        </div>
+
+        <!-- Habits Streak -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card success">
+                <div class="heading">Best Habit Streak</div>
+                {% set max_streak = 0 %}
+                {% for habit in habits %}
+                    {% if habit[4]|int > max_streak %}
+                        {% set max_streak = habit[4]|int %}
+                    {% endif %}
+                {% endfor %}
+                <div class="value">{{ max_streak }} days</div>
+                <div class="icon"><i class="fas fa-fire"></i></div>
+            </div>
+        </div>
+
+        <!-- Today's Habits -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card warning">
+                <div class="heading">Today's Habits</div>
+                {% set completed = 0 %}
+                {% for habit in habits %}
+                    {% if habit[6]|int > 0 %}
+                        {% set completed = completed + 1 %}
+                    {% endif %}
+                {% endfor %}
+                <div class="value">{{ completed }}/{{ habits|length }}</div>
+                <div class="icon"><i class="fas fa-check-circle"></i></div>
+            </div>
+        </div>
+
+        <!-- Focus Minutes -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card danger">
+                <div class="heading">Today's Focus Minutes</div>
+                {% set focus_minutes = 0 %}
+                {% for routine in routines %}
+                    {% if routine[4] == 'High' %}
+                        {% set focus_minutes = focus_minutes + routine[3] %}
+                    {% endif %}
+                {% endfor %}
+                <div class="value">{{ focus_minutes }} min</div>
+                <div class="icon"><i class="fas fa-brain"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Schedule -->
+    <div class="row">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold">Today's Schedule</h6>
+                    <a href="{{ url_for('view_routines') }}" class="btn btn-sm btn-primary">Manage</a>
+                </div>
+                <div class="card-body">
+                    <h4 class="small font-weight-bold">Energy Distribution</h4>
+                    <div class="progress mb-4">
+                        {% set high_percent = 0 %}
+                        {% set medium_percent = 0 %}
+                        {% set low_percent = 0 %}
+                        {% set total_minutes = 0 %}
+
+                        {% for routine in routines %}
+                            {% set total_minutes = total_minutes + routine[3] %}
+                            {% if routine[4] == 'High' %}
+                                {% set high_percent = high_percent + routine[3] %}
+                            {% elif routine[4] == 'Medium' %}
+                                {% set medium_percent = medium_percent + routine[3] %}
+                            {% else %}
+                                {% set low_percent = low_percent + routine[3] %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if total_minutes > 0 %}
+                            {% set high_width = (high_percent / total_minutes) * 100 %}
+                            {% set medium_width = (medium_percent / total_minutes) * 100 %}
+                            {% set low_width = (low_percent / total_minutes) * 100 %}
+                        {% else %}
+                            {% set high_width = 0 %}
+                            {% set medium_width = 0 %}
+                            {% set low_width = 0 %}
+                        {% endif %}
+
+                        <div class="progress-bar high-energy" role="progressbar" style="width: {{ high_width }}%"></div>
+                        <div class="progress-bar medium-energy" role="progressbar" style="width: {{ medium_width }}%"></div>
+                        <div class="progress-bar low-energy" role="progressbar" style="width: {{ low_width }}%"></div>
+                    </div>
+                    <div class="mb-1 small">
+                        <span class="mr-2"><i class="fas fa-circle text-success"></i> High Energy ({{ high_percent }} min)</span>
+                        <span class="mr-2"><i class="fas fa-circle text-warning"></i> Medium Energy ({{ medium_percent }} min)</span>
+                        <span class="mr-2"><i class="fas fa-circle text-secondary"></i> Low Energy ({{ low_percent }} min)</span>
+                    </div>
+
+                    <hr>
+
+                    <div class="routine-container">
+                        {% for routine in routines %}
+                            <div class="routine-block {{ routine[4]|lower }}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>{{ routine[1] }}</strong>
+                                    <span class="badge bg-{{ 'success' if routine[4] == 'High' else 'warning' if routine[4] == 'Medium' else 'secondary' }}">
+                                        {{ routine[4] }} Energy
+                                    </span>
+                                </div>
+                                <div>{{ routine[2] }}</div>
+                                {% if routine[3] > 0 %}
+                                    <div class="small text-muted">{{ routine[3] }} minutes</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Habits -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold">Today's Habits</h6>
+                    <a href="{{ url_for('view_habits') }}" class="btn btn-sm btn-primary">Manage</a>
+                </div>
+                <div class="card-body">
+                    {% if habits %}
+                        <div class="habit-list">
+                            {% for habit in habits %}
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <form action="{{ url_for('log_habit', id=habit[0]) }}" method="post" class="d-inline">
+                                            <input type="hidden" name="completed" value="{{ 'false' if habit[6]|int > 0 else 'true' }}">
+                                            <span class="habit-check {{ 'completed' if habit[6]|int > 0 else '' }}" onclick="this.closest('form').submit();">
+                                                <i class="{{ 'fas fa-check-circle' if habit[6]|int > 0 else 'far fa-circle' }}"></i>
+                                            </span>
+                                        </form>
+                                        <span class="ms-2">{{ habit[1] }}</span>
+                                    </div>
+                                    <span class="badge bg-primary">{{ habit[4]|int }} day streak</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center my-4">No habits added yet. <a href="{{ url_for('add_habit') }}">Add your first habit</a>.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Priority Goals -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold">Priority Goals</h6>
+                    <a href="{{ url_for('view_goals') }}" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% for goal in goals[:3] %}
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <h6 class="mb-0">{{ goal[2] }}</h6>
+                                <div class="small text-muted">{{ goal[1] }}</div>
+                            </div>
+                            <div class="badge
+                                {{ 'bg-danger' if loop.index == 1 else 'bg-warning' if loop.index == 2 else 'bg-info' }}">
+                                Priority {{ goal[4] }}
+                            </div>
+                        </div>
+                        {% if not loop.last %}
+                            <hr>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

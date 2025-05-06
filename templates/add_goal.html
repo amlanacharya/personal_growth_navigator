@@ -1,0 +1,80 @@
+<!-- templates/add_goal.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0 text-gray-800">Add New Goal</h1>
+            <p class="mb-4">Create a new goal to track your personal growth journey.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Goal Details</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('add_goal') }}">
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="" disabled selected>Select a category</option>
+                                <option value="Physical Fitness">Physical Fitness</option>
+                                <option value="Mental Wellbeing">Mental Wellbeing</option>
+                                <option value="Professional Development">Professional Development</option>
+                                <option value="Personal Relationships">Personal Relationships</option>
+                                <option value="Financial">Financial</option>
+                                <option value="Spiritual">Spiritual</option>
+                                <option value="Hobbies">Hobbies</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" required placeholder="What do you want to achieve?"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="deadline" class="form-label">Deadline (optional)</label>
+                            <input type="date" class="form-control" id="deadline" name="deadline">
+                        </div>
+                        <div class="mb-3">
+                            <label for="priority" class="form-label">Priority (1 is highest)</label>
+                            <select class="form-select" id="priority" name="priority" required>
+                                <option value="1">1 - Highest</option>
+                                <option value="2">2 - High</option>
+                                <option value="3">3 - Medium</option>
+                                <option value="4">4 - Low</option>
+                                <option value="5">5 - Lowest</option>
+                            </select>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('view_goals') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Goal</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Tips for Effective Goals</h6>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li><strong>Specific:</strong> Be clear about what you want to achieve</li>
+                        <li><strong>Measurable:</strong> Include metrics to track progress</li>
+                        <li><strong>Achievable:</strong> Make sure it's realistic</li>
+                        <li><strong>Relevant:</strong> Align with your values and long-term vision</li>
+                        <li><strong>Time-bound:</strong> Set a deadline</li>
+                    </ul>
+                    <p class="mb-0">Remember to break down larger goals into smaller, manageable habits!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

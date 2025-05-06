@@ -1,0 +1,73 @@
+<!-- templates/add_habit.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 fade-in">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0 text-gray-800">Add New Habit</h1>
+            <p class="mb-4">Create a new habit to support your goals.</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Habit Details</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('add_habit') }}" method="post">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Habit Name</label>
+                            <input type="text" class="form-control" id="name" name="name" placeholder="e.g. Morning workout" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="goal_id" class="form-label">Related Goal (Optional)</label>
+                            <select class="form-select" id="goal_id" name="goal_id">
+                                <option value="">None</option>
+                                {% for goal in goals %}
+                                    <option value="{{ goal[0] }}">{{ goal[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="frequency" class="form-label">Frequency</label>
+                            <select class="form-select" id="frequency" name="frequency" required>
+                                <option value="daily">Daily</option>
+                                <option value="weekdays">Weekdays Only</option>
+                                <option value="weekends">Weekends Only</option>
+                                <option value="weekly">Weekly</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('view_habits') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Habit</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Habit Formation Tips</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li class="mb-2">Start with small, achievable habits</li>
+                        <li class="mb-2">Connect new habits to existing routines</li>
+                        <li class="mb-2">Make the habit obvious and easy to do</li>
+                        <li class="mb-2">Focus on consistency over perfection</li>
+                        <li class="mb-2">Track your progress to stay motivated</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

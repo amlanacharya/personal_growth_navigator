@@ -1,0 +1,86 @@
+<!-- templates/goals.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 fade-in">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0 text-gray-800">Your Goals</h1>
+            <p class="mb-4">Track and manage your personal and professional goals.</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('add_goal') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add New Goal
+            </a>
+        </div>
+    </div>
+
+    <!-- Goal Categories -->
+    <div class="row">
+        {% set categories = [] %}
+        {% for goal in goals %}
+            {% if goal[1] not in categories %}
+                {% set categories = categories + [goal[1]] %}
+            {% endif %}
+        {% endfor %}
+
+        {% for category in categories %}
+            <div class="col-12 mb-4">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold">{{ category }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for goal in goals %}
+                                {% if goal[1] == category %}
+                                    <div class="col-xl-4 col-md-6 mb-4">
+                                        <div class="card h-100 border-left-{{ 'danger' if goal[4] == 1 else 'warning' if goal[4] == 2 else 'info' if goal[4] == 3 else 'secondary' }} shadow goal-card">
+                                            <div class="card-body">
+                                                <div class="text-center">
+                                                    <div class="goal-icon text-{{ 'danger' if goal[4] == 1 else 'warning' if goal[4] == 2 else 'info' if goal[4] == 3 else 'secondary' }}">
+                                                        {% if category == 'Physical Fitness' %}
+                                                            <i class="fas fa-dumbbell"></i>
+                                                        {% elif category == 'Professional Development' %}
+                                                            <i class="fas fa-briefcase"></i>
+                                                        {% elif category == 'Learning' %}
+                                                            <i class="fas fa-book"></i>
+                                                        {% elif category == 'Financial' %}
+                                                            <i class="fas fa-dollar-sign"></i>
+                                                        {% elif category == 'Relationships' %}
+                                                            <i class="fas fa-heart"></i>
+                                                        {% else %}
+                                                            <i class="fas fa-star"></i>
+                                                        {% endif %}
+                                                    </div>
+                                                    <h5>{{ goal[2] }}</h5>
+                                                    {% if goal[3] %}
+                                                        <div class="text-muted mb-2">Deadline: {{ goal[3] }}</div>
+                                                    {% endif %}
+                                                    <div class="mb-3">
+                                                        <span class="badge bg-{{ 'danger' if goal[4] == 1 else 'warning' if goal[4] == 2 else 'info' if goal[4] == 3 else 'secondary' }}">
+                                                            Priority {{ goal[4] }}
+                                                        </span>
+                                                        <span class="badge bg-{{ 'success' if goal[5] == 'active' else 'secondary' }}">
+                                                            {{ goal[5]|capitalize }}
+                                                        </span>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <a href="{{ url_for('edit_goal', id=goal[0]) }}" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-edit"></i> Edit
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

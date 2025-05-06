@@ -1,0 +1,101 @@
+<!-- templates/edit_routine.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 fade-in">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0 text-gray-800">Edit Routine Activity</h1>
+            <p class="mb-4">Update your routine activity details.</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Activity Details</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('edit_routine', id=routine[0]) }}" method="post">
+                        <div class="mb-3">
+                            <label for="time_block" class="form-label">Time Block</label>
+                            <input type="text" class="form-control" id="time_block" name="time_block" value="{{ routine[1] }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="activity" class="form-label">Activity</label>
+                            <input type="text" class="form-control" id="activity" name="activity" value="{{ routine[2] }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="duration" class="form-label">Duration (minutes)</label>
+                            <input type="number" class="form-control" id="duration" name="duration" min="0" value="{{ routine[3] }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="energy_level" class="form-label">Energy Level</label>
+                            <select class="form-select" id="energy_level" name="energy_level" required>
+                                <option value="High" {% if routine[4] == 'High' %}selected{% endif %}>High</option>
+                                <option value="Medium" {% if routine[4] == 'Medium' %}selected{% endif %}>Medium</option>
+                                <option value="Low" {% if routine[4] == 'Low' %}selected{% endif %}>Low</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Days of Week</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="weekdays" value="Monday" id="monday" {% if 'Monday' in selected_weekdays %}checked{% endif %}>
+                                <label class="form-check-label" for="monday">
+                                    Monday
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="weekdays" value="Tuesday" id="tuesday" {% if 'Tuesday' in selected_weekdays %}checked{% endif %}>
+                                <label class="form-check-label" for="tuesday">
+                                    Tuesday
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="weekdays" value="Wednesday" id="wednesday" {% if 'Wednesday' in selected_weekdays %}checked{% endif %}>
+                                <label class="form-check-label" for="wednesday">
+                                    Wednesday
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="weekdays" value="Thursday" id="thursday" {% if 'Thursday' in selected_weekdays %}checked{% endif %}>
+                                <label class="form-check-label" for="thursday">
+                                    Thursday
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="weekdays" value="Friday" id="friday" {% if 'Friday' in selected_weekdays %}checked{% endif %}>
+                                <label class="form-check-label" for="friday">
+                                    Friday
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="weekdays" value="Saturday" id="saturday" {% if 'Saturday' in selected_weekdays %}checked{% endif %}>
+                                <label class="form-check-label" for="saturday">
+                                    Saturday
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="weekdays" value="Sunday" id="sunday" {% if 'Sunday' in selected_weekdays %}checked{% endif %}>
+                                <label class="form-check-label" for="sunday">
+                                    Sunday
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('view_routines') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Update Activity</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
