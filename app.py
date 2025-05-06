@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 import sqlite3
 import os
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from ai_helper import AIHelper, create_env_file
@@ -751,6 +751,153 @@ def delete_roadmap(id):
 
     flash('Roadmap deleted successfully!')
     return redirect(url_for('ai_roadmap'))
+
+@app.route('/ai_roadmap/save_goals', methods=['POST'])
+@login_required
+def save_extracted_goals():
+    user_id = session['user_id']
+    goals_json = request.form.get('goals', '[]')
+
+    try:
+        goals = json.loads(goals_json)
+
+        if not goals:
+            flash('No goals selected to save')
+            return redirect(request.referrer or url_for('ai_roadmap'))
+
+        conn = get_db_connection()
+
+        # Save each goal
+        for goal in goals:
+            # Determine a default category based on the goal content
+            category = 'Personal Development'  # Default category
+            if any(kw in goal.lower() for kw in ['health', 'exercise', 'fitness', 'diet', 'nutrition', 'weight']):
+                category = 'Physical Fitness'
+            elif any(kw in goal.lower() for kw in ['career', 'job', 'work', 'professional', 'business']):
+                category = 'Career'
+            elif any(kw in goal.lower() for kw in ['learn', 'study', 'education', 'knowledge', 'skill']):
+                category = 'Learning'
+            elif any(kw in goal.lower() for kw in ['family', 'friend', 'relationship', 'social']):
+                category = 'Relationships'
+            elif any(kw in goal.lower() for kw in ['finance', 'money', 'saving', 'budget', 'invest']):
+                category = 'Financial'
+
+            # Set a default deadline of 3 months from now
+            deadline = (datetime.now() + timedelta(days=90)).strftime('%Y-%m-%d')
+
+            # Set a medium priority by default
+            priority = 2
+
+            conn.execute('INSERT INTO goals (user_id, category, description, deadline, priority, status) VALUES (?, ?, ?, ?, ?, ?)',
+                        (user_id, category, goal, deadline, priority, 'active'))
+
+        conn.commit()
+        conn.close()
+
+        flash(f'Successfully added {len(goals)} goals to your account!')
+        return redirect(url_for('view_goals'))
+
+    except json.JSONDecodeError:
+        flash('Error processing goals data')
+        return redirect(request.referrer or url_for('ai_roadmap'))
+
+@app.route('/ai_roadmap/save_habits', methods=['POST'])
+@login_required
+def save_extracted_habits():
+    user_id = session['user_id']
+    habits_json = request.form.get('habits', '[]')
+
+    try:
+        habits = json.loads(habits_json)
+
+        if not habits:
+            flash('No habits selected to save')
+            return redirect(request.referrer or url_for('ai_roadmap'))
+
+        conn = get_db_connection()
+
+        # Get user's active goals for potential linking
+        goals = conn.execute('SELECT id, description FROM goals WHERE user_id = ? AND status = "active"',
+                           (user_id,)).fetchall()
+
+        # Save each habit
+        for habit in habits:
+            # Try to find a related goal
+            related_goal_id = None
+            for goal in goals:
+                # Simple matching - check if any significant words from the habit appear in the goal
+                habit_words = set(w.lower() for w in habit.split() if len(w) > 3)
+                goal_words = set(w.lower() for w in goal[1].split() if len(w) > 3)
+
+                if habit_words.intersection(goal_words):
+                    related_goal_id = goal[0]
+                    break
+
+            # Default frequency
+            frequency = 'daily'
+
+            conn.execute('INSERT INTO habits (user_id, name, goal_id, frequency, streak, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                        (user_id, habit, related_goal_id, frequency, 0, datetime.now().strftime('%Y-%m-%d')))
+
+        conn.commit()
+        conn.close()
+
+        flash(f'Successfully added {len(habits)} habits to your account!')
+        return redirect(url_for('view_habits'))
+
+    except json.JSONDecodeError:
+        flash('Error processing habits data')
+        return redirect(request.referrer or url_for('ai_roadmap'))
+
+@app.route('/ai_roadmap/save_routines', methods=['POST'])
+@login_required
+def save_extracted_routines():
+    user_id = session['user_id']
+    routines_json = request.form.get('routines', '[]')
+
+    try:
+        routines = json.loads(routines_json)
+
+        if not routines:
+            flash('No routines selected to save')
+            return redirect(request.referrer or url_for('ai_roadmap'))
+
+        conn = get_db_connection()
+
+        # Save each routine
+        for routine in routines:
+            # Try to extract time information from the routine description
+            time_block = 'Morning'  # Default
+            if any(kw in routine.lower() for kw in ['morning', 'am', 'breakfast', 'wake']):
+                time_block = 'Morning'
+            elif any(kw in routine.lower() for kw in ['noon', 'lunch', 'midday']):
+                time_block = 'Midday'
+            elif any(kw in routine.lower() for kw in ['afternoon', 'evening', 'pm']):
+                time_block = 'Afternoon'
+            elif any(kw in routine.lower() for kw in ['night', 'bedtime', 'sleep']):
+                time_block = 'Evening'
+
+            # Default duration of 30 minutes
+            duration = 30
+
+            # Default energy level
+            energy_level = 'Medium'
+
+            # Default to all weekdays
+            weekdays = 'Monday,Tuesday,Wednesday,Thursday,Friday'
+
+            conn.execute('INSERT INTO routines (user_id, time_block, activity, duration, energy_level, weekdays) VALUES (?, ?, ?, ?, ?, ?)',
+                        (user_id, time_block, routine, duration, energy_level, weekdays))
+
+        conn.commit()
+        conn.close()
+
+        flash(f'Successfully added {len(routines)} routines to your account!')
+        return redirect(url_for('view_routines'))
+
+    except json.JSONDecodeError:
+        flash('Error processing routines data')
+        return redirect(request.referrer or url_for('ai_roadmap'))
 
 if __name__ == '__main__':
     app.run(debug=True)

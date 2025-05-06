@@ -18,6 +18,7 @@ else:
 
 # System prompt for the Personal Growth Navigator
 SYSTEM_PROMPT = """You are now my Personal Growth Navigator, an expert system designed to help me create, manage, and optimize my daily routines to achieve both personal and professional growth. Your primary function is to transform my goals into actionable daily habits and schedules while adapting to my changing needs and circumstances.
+
 Core Responsibilities:
 1. Goal Analysis & Prioritization: Help me clarify and prioritize my short-term and long-term goals across all life domains (career, health, relationships, learning, etc.).
 2. Routine Engineering: Create personalized daily/weekly routines that integrate tasks and habits aligned with my prioritized goals.
@@ -25,6 +26,7 @@ Core Responsibilities:
 4. Progress Tracking: Maintain records of my progress toward goals and adjust routines based on what's working and what isn't.
 5. Adaptive Planning: Regularly update routines based on changing priorities, energy levels, unexpected events, and feedback.
 6. Contextual Intelligence: Account for my unique circumstances including work schedule, family obligations, health considerations, and energy fluctuations.
+
 Interaction Protocol:
 Initial Setup:
 * Ask me about my personal and professional goals with clear timelines
@@ -32,18 +34,21 @@ Initial Setup:
 * Identify potential obstacles, commitments, and constraints
 * Determine my productivity preferences (time blocking, pomodoro, etc.)
 * Assess my current habits that help or hinder my goals
+
 Ongoing Support:
 * Begin each session with a brief review of progress and challenges since last interaction
 * Allow me to easily update you on changing priorities or circumstances
 * Provide recommendations for routine adjustments based on feedback
 * Offer strategies for overcoming specific obstacles
 * Suggest small, incremental improvements rather than complete routine overhauls
+
 Daily/Weekly Planning:
 * Create detailed daily schedules with specific time blocks
 * Balance goal-oriented activities with necessary maintenance tasks
 * Include dedicated time for rest, recreation, and relationships
 * Build in buffer time for unexpected events
 * Recommend context-specific habits that compound toward my larger goals
+
 Advanced Features:
 * Skill Acquisition Pathways: Break down learning goals into daily practice components
 * Energy Management: Align high-focus tasks with my peak energy periods
@@ -53,13 +58,41 @@ Advanced Features:
 * Deep Work Facilitation: Schedule uninterrupted blocks for focused work on high-value tasks
 * Seasonal Adaptations: Adjust recommendations based on seasonal changes, travel, or major life events
 * Recovery Protocols: Provide strategies for getting back on track after disruptions
+
 Communication Style:
 * Be direct and action-oriented
 * Provide specific, actionable advice rather than generalities
 * Use visual aids when appropriate (tables, charts, diagrams)
 * Challenge me when necessary, but remain supportive
 * Balance optimization with well-being and sustainability
-When responding, always start by analyzing my current situation before offering recommendations. Focus on providing actionable insights rather than general productivity advice. Remember that the goal is sustainable growth, not burnout-inducing perfectionism."""
+
+IMPORTANT FORMATTING INSTRUCTIONS:
+When providing a roadmap or plan, always structure your response in the following format:
+
+1. Start with a brief personalized introduction and analysis of the user's situation.
+
+2. Then provide a clear, structured roadmap with these distinct sections:
+
+## GOALS
+- [Goal 1 description]
+- [Goal 2 description]
+- [Goal 3 description]
+
+## HABITS
+- [Habit 1 description]
+- [Habit 2 description]
+- [Habit 3 description]
+
+## ROUTINES
+- [Routine 1 description]
+- [Routine 2 description]
+- [Routine 3 description]
+
+3. End with a brief conclusion and next steps.
+
+This structured format is essential as it allows the system to properly extract and display your recommendations to the user. Always use the exact section headers (## GOALS, ## HABITS, ## ROUTINES) and bullet points as shown above.
+
+When responding, always start by analyzing the current situation before offering recommendations. Focus on providing actionable insights rather than general productivity advice. Remember that the goal is sustainable growth, not burnout-inducing perfectionism."""
 
 class AIHelper:
     def __init__(self):
@@ -202,7 +235,7 @@ class AIHelper:
     def extract_roadmap_items(self, ai_response):
         """
         Extract goals, habits, and routines from the AI response.
-        This is a simple implementation and might need refinement.
+        This implementation looks for the structured format defined in the system prompt.
 
         Args:
             ai_response (str): The AI's response
@@ -210,42 +243,69 @@ class AIHelper:
         Returns:
             dict: Dictionary containing extracted goals, habits, and routines
         """
-        # This is a simplified extraction - in a real implementation,
-        # you might want to use more sophisticated NLP or ask the LLM to format its response
-        # in a specific way that's easier to parse
-
         roadmap = {
             "goals": [],
             "habits": [],
             "routines": []
         }
 
-        # Simple keyword-based extraction
+        # Split the response into lines for processing
         lines = ai_response.split('\n')
         current_section = None
 
         for line in lines:
             line = line.strip()
 
-            # Check for section headers
-            if "goal" in line.lower() and not current_section:
-                current_section = "goals"
-                continue
-            elif "habit" in line.lower() and not current_section:
-                current_section = "habits"
-                continue
-            elif "routine" in line.lower() and not current_section:
-                current_section = "routines"
-                continue
-
             # Skip empty lines
             if not line:
+                continue
+
+            # Check for section headers using the exact format from the prompt
+            if line.lower() == "## goals":
+                current_section = "goals"
+                continue
+            elif line.lower() == "## habits":
+                current_section = "habits"
+                continue
+            elif line.lower() == "## routines":
+                current_section = "routines"
                 continue
 
             # Add items to the appropriate section
             if current_section and line.startswith('-'):
                 item = line[1:].strip()
                 roadmap[current_section].append(item)
+
+        # If the structured format wasn't found, try a more flexible approach
+        if not any(roadmap.values()):
+            current_section = None
+            for line in lines:
+                line = line.strip()
+
+                # Skip empty lines
+                if not line:
+                    continue
+
+                # Look for section headers in a more flexible way
+                if "goal" in line.lower() and (":" in line or line.endswith("s")):
+                    current_section = "goals"
+                    continue
+                elif "habit" in line.lower() and (":" in line or line.endswith("s")):
+                    current_section = "habits"
+                    continue
+                elif "routine" in line.lower() and (":" in line or line.endswith("s")):
+                    current_section = "routines"
+                    continue
+
+                # Add items to the appropriate section
+                if current_section and (line.startswith('-') or line.startswith('•') or line.startswith('*')):
+                    # Remove the bullet point character and any leading/trailing whitespace
+                    item = line[1:].strip()
+                    roadmap[current_section].append(item)
+                # Also try to capture numbered items
+                elif current_section and (line[0].isdigit() and line[1:3] in ['. ', ') ']):
+                    item = line[line.find(' ')+1:].strip()
+                    roadmap[current_section].append(item)
 
         return roadmap
 

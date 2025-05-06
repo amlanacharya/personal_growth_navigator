@@ -21,19 +21,49 @@
                     </button>
                 </div>
                 <div class="card-body">
-                    <div id="chat-container" class="mb-3" style="height: 400px; overflow-y: auto; border: 1px solid #e3e6f0; border-radius: 5px; padding: 15px;">
+                    <div id="chat-container" class="mb-3" style="height: 450px; overflow-y: auto; border: 1px solid #e3e6f0; border-radius: 5px; padding: 15px;">
                         <div class="ai-message">
                             <div class="message-content">
-                                <p>Hello! I'm your Personal Growth Navigator. I'm here to help you create a personalized roadmap for your growth journey.</p>
-                                <p>To get started, I'd like to learn more about you:</p>
-                                <ul>
-                                    <li>What are your main personal and professional goals?</li>
-                                    <li>What does your current daily routine look like?</li>
-                                    <li>What are your biggest challenges or obstacles?</li>
-                                    <li>What are your energy patterns throughout the day?</li>
-                                    <li>What habits would you like to develop or break?</li>
-                                </ul>
-                                <p>Feel free to share as much or as little as you're comfortable with. The more I know, the better I can help you!</p>
+                                <div class="ai-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="ai-text">
+                                    <p>Hello! I'm your Personal Growth Navigator. I'm here to help you create a personalized roadmap for your growth journey.</p>
+                                    <p>I'll guide you through creating a structured plan with:</p>
+                                    <div class="roadmap-features">
+                                        <div class="feature">
+                                            <i class="fas fa-bullseye text-primary"></i>
+                                            <span>Clear Goals</span>
+                                        </div>
+                                        <div class="feature">
+                                            <i class="fas fa-calendar-check text-warning"></i>
+                                            <span>Daily Habits</span>
+                                        </div>
+                                        <div class="feature">
+                                            <i class="fas fa-clock text-success"></i>
+                                            <span>Effective Routines</span>
+                                        </div>
+                                    </div>
+                                    <p class="mt-3">To get started, I'd like to learn more about you. You can answer any of these questions:</p>
+                                    <div class="question-prompts">
+                                        <button class="question-prompt" data-question="My main goals are to improve my health, advance in my career, and spend more quality time with family.">
+                                            <i class="fas fa-bullseye"></i> What are your main goals?
+                                        </button>
+                                        <button class="question-prompt" data-question="My current daily routine involves waking up at 7am, working from 9-5, and then usually watching TV in the evening.">
+                                            <i class="fas fa-calendar-day"></i> What's your current routine?
+                                        </button>
+                                        <button class="question-prompt" data-question="My biggest challenges are procrastination, lack of energy in the afternoons, and difficulty maintaining consistency with exercise.">
+                                            <i class="fas fa-mountain"></i> What challenges do you face?
+                                        </button>
+                                        <button class="question-prompt" data-question="I have the most energy in the morning, feel a slump after lunch, and sometimes get a second wind in the evening.">
+                                            <i class="fas fa-battery-three-quarters"></i> When is your energy highest?
+                                        </button>
+                                        <button class="question-prompt" data-question="I'd like to develop a daily exercise habit and reduce my social media usage.">
+                                            <i class="fas fa-seedling"></i> What habits do you want to change?
+                                        </button>
+                                    </div>
+                                    <p class="mt-3">Feel free to share as much or as little as you're comfortable with. The more I know, the better I can help you!</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -113,51 +143,101 @@
         const sendBtn = document.getElementById('send-btn');
         const saveRoadmapBtn = document.getElementById('save-roadmap-btn');
         const roadmapContent = document.getElementById('roadmap-content');
-        
+
         let conversation = [];
         let lastAiResponse = '';
-        
+
         // Function to add a message to the chat
         function addMessage(message, isUser) {
             const messageDiv = document.createElement('div');
             messageDiv.className = isUser ? 'user-message' : 'ai-message';
-            messageDiv.innerHTML = `
-                <div class="message-content">
-                    ${message}
-                </div>
-            `;
+
+            if (isUser) {
+                messageDiv.innerHTML = `
+                    <div class="message-content">
+                        ${message}
+                    </div>
+                `;
+            } else {
+                // Format AI messages to highlight goals, habits, and routines
+                let formattedMessage = message;
+
+                // Format section headers
+                formattedMessage = formattedMessage.replace(/## GOALS/gi, '<h4 class="mt-3 mb-2 text-primary"><i class="fas fa-bullseye me-2"></i>Goals</h4>');
+                formattedMessage = formattedMessage.replace(/## HABITS/gi, '<h4 class="mt-3 mb-2 text-warning"><i class="fas fa-calendar-check me-2"></i>Habits</h4>');
+                formattedMessage = formattedMessage.replace(/## ROUTINES/gi, '<h4 class="mt-3 mb-2 text-success"><i class="fas fa-clock me-2"></i>Routines</h4>');
+
+                // Format bullet points
+                formattedMessage = formattedMessage.replace(/- (.*?)(?=<br>|$)/g, '<div class="mb-2"><i class="fas fa-check text-success me-2"></i>$1</div>');
+
+                messageDiv.innerHTML = `
+                    <div class="message-content">
+                        <div class="ai-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="ai-text">
+                            ${formattedMessage}
+                        </div>
+                    </div>
+                `;
+            }
+
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-            
+
             // Add to conversation array
             conversation.push({
                 role: isUser ? 'user' : 'assistant',
                 content: message
             });
-            
+
             // Enable save button after AI has responded
             if (!isUser) {
                 lastAiResponse = message;
                 saveRoadmapBtn.disabled = false;
+
+                // Check if this is a roadmap response (contains goals, habits, routines sections)
+                if (message.includes('## GOALS') ||
+                    message.toLowerCase().includes('goals:') ||
+                    message.includes('## HABITS') ||
+                    message.toLowerCase().includes('habits:') ||
+                    message.includes('## ROUTINES') ||
+                    message.toLowerCase().includes('routines:')) {
+
+                    // Show a tooltip suggesting to save the roadmap
+                    const saveTooltip = document.createElement('div');
+                    saveTooltip.className = 'save-tooltip';
+                    saveTooltip.innerHTML = `
+                        <i class="fas fa-lightbulb text-warning"></i>
+                        <span>This looks like a complete roadmap! Click "Save Roadmap" to save it for future reference.</span>
+                    `;
+                    messageDiv.appendChild(saveTooltip);
+
+                    // Highlight the save button
+                    saveRoadmapBtn.classList.add('btn-pulse');
+                    setTimeout(() => {
+                        saveRoadmapBtn.classList.remove('btn-pulse');
+                    }, 5000);
+                }
             }
         }
-        
+
         // Function to send a message to the AI
         function sendMessage() {
             const message = userInput.value.trim();
             if (message === '') return;
-            
+
             // Add user message to chat
             addMessage(message, true);
             userInput.value = '';
-            
+
             // Show loading indicator
             const loadingDiv = document.createElement('div');
             loadingDiv.className = 'ai-message loading';
             loadingDiv.innerHTML = '<div class="message-content"><i class="fas fa-spinner fa-spin"></i> Thinking...</div>';
             chatContainer.appendChild(loadingDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-            
+
             // Send message to server
             fetch('{{ url_for("ai_roadmap_chat") }}', {
                 method: 'POST',
@@ -172,7 +252,7 @@
             .then(data => {
                 // Remove loading indicator
                 chatContainer.removeChild(loadingDiv);
-                
+
                 // Add AI response to chat
                 addMessage(data.response, false);
             })
@@ -182,7 +262,7 @@
                 addMessage('Sorry, there was an error processing your request. Please try again.', false);
             });
         }
-        
+
         // Event listeners
         sendBtn.addEventListener('click', sendMessage);
         userInput.addEventListener('keypress', function(e) {
@@ -190,47 +270,160 @@
                 sendMessage();
             }
         });
-        
+
         saveRoadmapBtn.addEventListener('click', function() {
             // Set the content to be saved
             roadmapContent.value = lastAiResponse;
-            
+
             // Show the modal
             const saveModal = new bootstrap.Modal(document.getElementById('saveRoadmapModal'));
             saveModal.show();
         });
-        
-        // Style the chat messages
+
+        // Add event listeners to question prompt buttons
+        document.querySelectorAll('.question-prompt').forEach(button => {
+            button.addEventListener('click', function() {
+                const question = this.getAttribute('data-question');
+                userInput.value = question;
+                sendMessage();
+            });
+        });
+
+        // Style the chat interface
         const style = document.createElement('style');
         style.textContent = `
             .user-message, .ai-message {
-                margin-bottom: 15px;
-                padding: 10px 15px;
-                border-radius: 10px;
-                max-width: 80%;
+                margin-bottom: 20px;
+                padding: 15px;
+                border-radius: 12px;
+                max-width: 85%;
                 clear: both;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+                animation: fadeIn 0.3s ease-in-out;
             }
-            
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
             .user-message {
                 background-color: #4e73df;
                 color: white;
                 float: right;
-                margin-left: 20%;
+                margin-left: 15%;
+                border-bottom-right-radius: 0;
             }
-            
+
             .ai-message {
                 background-color: #f8f9fc;
                 border: 1px solid #e3e6f0;
                 float: left;
-                margin-right: 20%;
+                margin-right: 15%;
+                border-bottom-left-radius: 0;
             }
-            
+
             .message-content {
                 word-wrap: break-word;
             }
-            
+
+            .ai-avatar {
+                width: 40px;
+                height: 40px;
+                background-color: #4e73df;
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 10px;
+                float: left;
+            }
+
+            .ai-text {
+                margin-left: 50px;
+            }
+
             .loading {
                 opacity: 0.7;
+            }
+
+            .roadmap-features {
+                display: flex;
+                justify-content: space-around;
+                margin: 15px 0;
+                flex-wrap: wrap;
+            }
+
+            .feature {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin: 5px 10px;
+                text-align: center;
+            }
+
+            .feature i {
+                font-size: 24px;
+                margin-bottom: 5px;
+            }
+
+            .question-prompts {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-top: 10px;
+            }
+
+            .question-prompt {
+                background-color: #f8f9fc;
+                border: 1px solid #e3e6f0;
+                border-radius: 20px;
+                padding: 8px 15px;
+                font-size: 0.9rem;
+                cursor: pointer;
+                transition: all 0.2s;
+                color: #5a5c69;
+            }
+
+            .question-prompt:hover {
+                background-color: #4e73df;
+                color: white;
+                transform: translateY(-2px);
+            }
+
+            .question-prompt i {
+                margin-right: 5px;
+            }
+
+            .save-tooltip {
+                position: absolute;
+                top: -40px;
+                right: 10px;
+                background-color: #fff;
+                border: 1px solid #e3e6f0;
+                border-radius: 5px;
+                padding: 8px 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                font-size: 0.85rem;
+                z-index: 10;
+                max-width: 250px;
+                animation: fadeInDown 0.5s ease-in-out;
+            }
+
+            @keyframes fadeInDown {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .btn-pulse {
+                animation: pulse 1.5s infinite;
+            }
+
+            @keyframes pulse {
+                0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+                70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
             }
         `;
         document.head.appendChild(style);

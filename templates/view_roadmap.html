@@ -32,7 +32,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="roadmap-content">
+                    <div class="roadmap-content formatted-content">
                         {{ roadmap[3]|safe }}
                     </div>
                 </div>
@@ -42,21 +42,33 @@
 
     <!-- Extracted Items -->
     <div id="extracted-items-container" style="display: none;">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> Select the items you want to add to your personal growth plan, then click the corresponding save button.
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <!-- Goals -->
             <div class="col-md-4 mb-4">
-                <div class="card shadow">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold">Extracted Goals</h6>
+                <div class="card shadow h-100">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center bg-gradient-primary text-white">
+                        <h6 class="m-0 font-weight-bold"><i class="fas fa-bullseye me-2"></i> Goals</h6>
+                        <span class="badge bg-light text-dark" id="goals-count">0</span>
                     </div>
                     <div class="card-body">
                         <div id="extracted-goals">
                             <p class="text-center text-muted">No goals extracted yet.</p>
                         </div>
                         <div class="text-center mt-3">
-                            <button id="save-goals-btn" class="btn btn-primary" disabled>
-                                <i class="fas fa-save"></i> Save Goals
-                            </button>
+                            <form id="save-goals-form" action="{{ url_for('save_extracted_goals') }}" method="post">
+                                <input type="hidden" name="goals" id="goals-input">
+                                <button id="save-goals-btn" class="btn btn-primary" disabled>
+                                    <i class="fas fa-save"></i> Save Goals
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -64,18 +76,22 @@
 
             <!-- Habits -->
             <div class="col-md-4 mb-4">
-                <div class="card shadow">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold">Extracted Habits</h6>
+                <div class="card shadow h-100">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center bg-gradient-warning text-white">
+                        <h6 class="m-0 font-weight-bold"><i class="fas fa-calendar-check me-2"></i> Habits</h6>
+                        <span class="badge bg-light text-dark" id="habits-count">0</span>
                     </div>
                     <div class="card-body">
                         <div id="extracted-habits">
                             <p class="text-center text-muted">No habits extracted yet.</p>
                         </div>
                         <div class="text-center mt-3">
-                            <button id="save-habits-btn" class="btn btn-warning" disabled>
-                                <i class="fas fa-save"></i> Save Habits
-                            </button>
+                            <form id="save-habits-form" action="{{ url_for('save_extracted_habits') }}" method="post">
+                                <input type="hidden" name="habits" id="habits-input">
+                                <button id="save-habits-btn" class="btn btn-warning" disabled>
+                                    <i class="fas fa-save"></i> Save Habits
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -83,18 +99,22 @@
 
             <!-- Routines -->
             <div class="col-md-4 mb-4">
-                <div class="card shadow">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold">Extracted Routines</h6>
+                <div class="card shadow h-100">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center bg-gradient-success text-white">
+                        <h6 class="m-0 font-weight-bold"><i class="fas fa-clock me-2"></i> Routines</h6>
+                        <span class="badge bg-light text-dark" id="routines-count">0</span>
                     </div>
                     <div class="card-body">
                         <div id="extracted-routines">
                             <p class="text-center text-muted">No routines extracted yet.</p>
                         </div>
                         <div class="text-center mt-3">
-                            <button id="save-routines-btn" class="btn btn-success" disabled>
-                                <i class="fas fa-save"></i> Save Routines
-                            </button>
+                            <form id="save-routines-form" action="{{ url_for('save_extracted_routines') }}" method="post">
+                                <input type="hidden" name="routines" id="routines-input">
+                                <button id="save-routines-btn" class="btn btn-success" disabled>
+                                    <i class="fas fa-save"></i> Save Routines
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -115,124 +135,268 @@
         const saveGoalsBtn = document.getElementById('save-goals-btn');
         const saveHabitsBtn = document.getElementById('save-habits-btn');
         const saveRoutinesBtn = document.getElementById('save-routines-btn');
-        
+        const goalsInput = document.getElementById('goals-input');
+        const habitsInput = document.getElementById('habits-input');
+        const routinesInput = document.getElementById('routines-input');
+        const goalsCount = document.getElementById('goals-count');
+        const habitsCount = document.getElementById('habits-count');
+        const routinesCount = document.getElementById('routines-count');
+
+        // Format the roadmap content for better readability
+        formatRoadmapContent();
+
+        // Function to format the roadmap content
+        function formatRoadmapContent() {
+            const content = document.querySelector('.roadmap-content');
+            const text = content.innerHTML;
+
+            // Format section headers
+            let formattedText = text.replace(/## GOALS/gi, '<h3 class="mt-4 mb-3 text-primary"><i class="fas fa-bullseye me-2"></i>Goals</h3>');
+            formattedText = formattedText.replace(/## HABITS/gi, '<h3 class="mt-4 mb-3 text-warning"><i class="fas fa-calendar-check me-2"></i>Habits</h3>');
+            formattedText = formattedText.replace(/## ROUTINES/gi, '<h3 class="mt-4 mb-3 text-success"><i class="fas fa-clock me-2"></i>Routines</h3>');
+
+            // Format bullet points
+            formattedText = formattedText.replace(/- (.*?)(?=<br>|$)/g, '<div class="mb-2"><i class="fas fa-check text-success me-2"></i>$1</div>');
+
+            content.innerHTML = formattedText;
+        }
+
         // Function to extract items from the roadmap content
         function extractItems() {
             const roadmapContent = document.querySelector('.roadmap-content').textContent;
-            
-            // Simple extraction logic - this is a placeholder
-            // In a real implementation, you might want to use more sophisticated parsing
-            // or have the AI format its response in a specific way
-            
+
+            // Improved extraction logic
             const goals = [];
             const habits = [];
             const routines = [];
-            
-            // Very simple keyword-based extraction
+
+            // Look for structured sections
             const lines = roadmapContent.split('\n');
             let currentSection = null;
-            
+
             for (const line of lines) {
                 const trimmedLine = line.trim();
-                
+
                 // Skip empty lines
                 if (trimmedLine === '') continue;
-                
-                // Check for section headers
-                if (trimmedLine.toLowerCase().includes('goal') && !currentSection) {
+
+                // Check for section headers (more robust detection)
+                if (trimmedLine.toLowerCase().includes('## goals') ||
+                    (trimmedLine.toLowerCase().includes('goal') &&
+                     (trimmedLine.includes(':') || trimmedLine.endsWith('s') || trimmedLine.endsWith('S')))) {
                     currentSection = 'goals';
                     continue;
-                } else if (trimmedLine.toLowerCase().includes('habit') && !currentSection) {
+                } else if (trimmedLine.toLowerCase().includes('## habits') ||
+                           (trimmedLine.toLowerCase().includes('habit') &&
+                            (trimmedLine.includes(':') || trimmedLine.endsWith('s') || trimmedLine.endsWith('S')))) {
                     currentSection = 'habits';
                     continue;
-                } else if (trimmedLine.toLowerCase().includes('routine') && !currentSection) {
+                } else if (trimmedLine.toLowerCase().includes('## routines') ||
+                           (trimmedLine.toLowerCase().includes('routine') &&
+                            (trimmedLine.includes(':') || trimmedLine.endsWith('s') || trimmedLine.endsWith('S')))) {
                     currentSection = 'routines';
                     continue;
                 }
-                
+
                 // Add items to the appropriate section
-                if (currentSection && trimmedLine.startsWith('-')) {
-                    const item = trimmedLine.substring(1).trim();
-                    
-                    if (currentSection === 'goals') {
-                        goals.push(item);
-                    } else if (currentSection === 'habits') {
-                        habits.push(item);
-                    } else if (currentSection === 'routines') {
-                        routines.push(item);
+                if (currentSection) {
+                    // Check for bullet points or numbered items
+                    if (trimmedLine.startsWith('-') || trimmedLine.startsWith('•') || trimmedLine.startsWith('*')) {
+                        const item = trimmedLine.substring(1).trim();
+
+                        if (currentSection === 'goals' && item) {
+                            goals.push(item);
+                        } else if (currentSection === 'habits' && item) {
+                            habits.push(item);
+                        } else if (currentSection === 'routines' && item) {
+                            routines.push(item);
+                        }
+                    }
+                    // Check for numbered items (e.g., "1. Item")
+                    else if (trimmedLine.match(/^\d+[\.\)]\s+/)) {
+                        const item = trimmedLine.replace(/^\d+[\.\)]\s+/, '').trim();
+
+                        if (currentSection === 'goals' && item) {
+                            goals.push(item);
+                        } else if (currentSection === 'habits' && item) {
+                            habits.push(item);
+                        } else if (currentSection === 'routines' && item) {
+                            routines.push(item);
+                        }
                     }
                 }
             }
-            
+
             // Display extracted items
             displayExtractedItems(goals, habits, routines);
-            
+
             // Show the extracted items container
             extractedItemsContainer.style.display = 'block';
+
+            // Scroll to the extracted items
+            extractedItemsContainer.scrollIntoView({ behavior: 'smooth' });
         }
-        
+
         // Function to display extracted items
         function displayExtractedItems(goals, habits, routines) {
+            // Update counts
+            goalsCount.textContent = goals.length;
+            habitsCount.textContent = habits.length;
+            routinesCount.textContent = routines.length;
+
             // Display goals
             if (goals.length > 0) {
-                let goalsHtml = '<ul class="list-group">';
+                let goalsHtml = '<div class="list-group">';
                 for (const goal of goals) {
                     goalsHtml += `
-                        <li class="list-group-item">
+                        <div class="list-group-item">
                             <div class="form-check">
                                 <input class="form-check-input goal-checkbox" type="checkbox" value="${goal}" checked>
                                 <label class="form-check-label">${goal}</label>
                             </div>
-                        </li>
+                        </div>
                     `;
                 }
-                goalsHtml += '</ul>';
+                goalsHtml += '</div>';
                 extractedGoals.innerHTML = goalsHtml;
                 saveGoalsBtn.disabled = false;
+
+                // Add event listeners to checkboxes
+                document.querySelectorAll('.goal-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', updateGoalsInput);
+                });
+
+                // Initialize the hidden input
+                updateGoalsInput();
+            } else {
+                extractedGoals.innerHTML = '<p class="text-center text-muted">No goals found in the roadmap.</p>';
+                saveGoalsBtn.disabled = true;
             }
-            
+
             // Display habits
             if (habits.length > 0) {
-                let habitsHtml = '<ul class="list-group">';
+                let habitsHtml = '<div class="list-group">';
                 for (const habit of habits) {
                     habitsHtml += `
-                        <li class="list-group-item">
+                        <div class="list-group-item">
                             <div class="form-check">
                                 <input class="form-check-input habit-checkbox" type="checkbox" value="${habit}" checked>
                                 <label class="form-check-label">${habit}</label>
                             </div>
-                        </li>
+                        </div>
                     `;
                 }
-                habitsHtml += '</ul>';
+                habitsHtml += '</div>';
                 extractedHabits.innerHTML = habitsHtml;
                 saveHabitsBtn.disabled = false;
+
+                // Add event listeners to checkboxes
+                document.querySelectorAll('.habit-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', updateHabitsInput);
+                });
+
+                // Initialize the hidden input
+                updateHabitsInput();
+            } else {
+                extractedHabits.innerHTML = '<p class="text-center text-muted">No habits found in the roadmap.</p>';
+                saveHabitsBtn.disabled = true;
             }
-            
+
             // Display routines
             if (routines.length > 0) {
-                let routinesHtml = '<ul class="list-group">';
+                let routinesHtml = '<div class="list-group">';
                 for (const routine of routines) {
                     routinesHtml += `
-                        <li class="list-group-item">
+                        <div class="list-group-item">
                             <div class="form-check">
                                 <input class="form-check-input routine-checkbox" type="checkbox" value="${routine}" checked>
                                 <label class="form-check-label">${routine}</label>
                             </div>
-                        </li>
+                        </div>
                     `;
                 }
-                routinesHtml += '</ul>';
+                routinesHtml += '</div>';
                 extractedRoutines.innerHTML = routinesHtml;
                 saveRoutinesBtn.disabled = false;
+
+                // Add event listeners to checkboxes
+                document.querySelectorAll('.routine-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', updateRoutinesInput);
+                });
+
+                // Initialize the hidden input
+                updateRoutinesInput();
+            } else {
+                extractedRoutines.innerHTML = '<p class="text-center text-muted">No routines found in the roadmap.</p>';
+                saveRoutinesBtn.disabled = true;
             }
         }
-        
+
+        // Function to update the goals input
+        function updateGoalsInput() {
+            const selectedGoals = [];
+            document.querySelectorAll('.goal-checkbox:checked').forEach(checkbox => {
+                selectedGoals.push(checkbox.value);
+            });
+            goalsInput.value = JSON.stringify(selectedGoals);
+            goalsCount.textContent = selectedGoals.length;
+        }
+
+        // Function to update the habits input
+        function updateHabitsInput() {
+            const selectedHabits = [];
+            document.querySelectorAll('.habit-checkbox:checked').forEach(checkbox => {
+                selectedHabits.push(checkbox.value);
+            });
+            habitsInput.value = JSON.stringify(selectedHabits);
+            habitsCount.textContent = selectedHabits.length;
+        }
+
+        // Function to update the routines input
+        function updateRoutinesInput() {
+            const selectedRoutines = [];
+            document.querySelectorAll('.routine-checkbox:checked').forEach(checkbox => {
+                selectedRoutines.push(checkbox.value);
+            });
+            routinesInput.value = JSON.stringify(selectedRoutines);
+            routinesCount.textContent = selectedRoutines.length;
+        }
+
         // Event listeners
         extractItemsBtn.addEventListener('click', extractItems);
-        
-        // Note: The save buttons would need additional implementation to actually save the items
-        // This would involve creating new routes in app.py to handle these actions
     });
 </script>
+
+<style>
+    .formatted-content h3 {
+        font-weight: 600;
+        border-bottom: 1px solid #e3e6f0;
+        padding-bottom: 0.5rem;
+    }
+
+    .list-group-item {
+        transition: background-color 0.2s;
+    }
+
+    .list-group-item:hover {
+        background-color: #f8f9fc;
+    }
+
+    .badge {
+        font-size: 0.9rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .bg-gradient-primary {
+        background: linear-gradient(to right, #4e73df, #224abe);
+    }
+
+    .bg-gradient-warning {
+        background: linear-gradient(to right, #f6c23e, #dda20a);
+    }
+
+    .bg-gradient-success {
+        background: linear-gradient(to right, #1cc88a, #13855c);
+    }
+</style>
 {% endblock %}
