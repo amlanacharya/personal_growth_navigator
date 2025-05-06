@@ -53,8 +53,8 @@
                                             <td>
                                                 <form action="{{ url_for('log_habit', id=habit[0]) }}" method="post" class="d-inline">
                                                     {% set is_completed = false %}
-                                                    {% for habit_id, dates in calendar_data|tojson|fromjson.items() %}
-                                                        {% if habit_id|int == habit[0]|int and dates is defined and dates|length > 0 %}
+                                                    {% for habit_id, dates in calendar_data.items() %}
+                                                        {% if habit_id|string == habit[0]|string and dates is defined and dates|length > 0 %}
                                                             {% if today in dates %}
                                                                 {% set is_completed = true %}
                                                             {% endif %}
@@ -128,7 +128,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Habits data from server
-        const calendarData = {{ calendar_data|safe }};
+        const calendarData = {{ calendar_data|tojson|safe }};
 
         // Create habit heat map calendar
         if (document.getElementById('habit-calendar')) {
