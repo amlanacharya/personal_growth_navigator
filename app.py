@@ -1,49 +1,87 @@
 # app.py
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g
 import sqlite3
 import os
 import json
 from datetime import datetime, date
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from ai_helper import AIHelper, create_env_file
 
 app = Flask(__name__)
 app.secret_key = "personal_growth_navigator_secret_key"
+
+# Create .env file if it doesn't exist
+create_env_file()
+
+# Initialize AI Helper
+ai_helper = None
+
+def get_ai_helper():
+    global ai_helper
+    if ai_helper is None:
+        ai_helper = AIHelper()
+    return ai_helper
 
 # Database setup
 def get_db_connection():
     if not os.path.exists('growth_navigator.db'):
         conn = sqlite3.connect('growth_navigator.db')
         cursor = conn.cursor()
+
+        # Create users table
+        cursor.execute('''
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            name TEXT NOT NULL,
+            partner_id INTEGER,
+            is_new_user BOOLEAN DEFAULT 1,
+            FOREIGN KEY (partner_id) REFERENCES users (id)
+        )
+        ''')
+
         cursor.execute('''
         CREATE TABLE goals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             category TEXT NOT NULL,
             description TEXT NOT NULL,
             deadline TEXT,
             priority INTEGER,
-            status TEXT DEFAULT 'active'
+            status TEXT DEFAULT 'active',
+            FOREIGN KEY (user_id) REFERENCES users (id)
         )
         ''')
+
         cursor.execute('''
         CREATE TABLE routines (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             time_block TEXT NOT NULL,
             activity TEXT NOT NULL,
             duration INTEGER,
             energy_level TEXT,
-            weekdays TEXT
+            weekdays TEXT,
+            FOREIGN KEY (user_id) REFERENCES users (id)
         )
         ''')
+
         cursor.execute('''
         CREATE TABLE habits (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             goal_id INTEGER,
             frequency TEXT,
             streak INTEGER DEFAULT 0,
             created_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES users (id),
             FOREIGN KEY (goal_id) REFERENCES goals (id)
         )
         ''')
+
         cursor.execute('''
         CREATE TABLE habit_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,62 +92,166 @@ def get_db_connection():
         )
         ''')
 
-        # Insert initial data
+        # Create AI conversations table
         cursor.execute('''
-        INSERT INTO goals (category, description, deadline, priority, status)
-        VALUES
-        ('Physical Fitness', 'Join gym and exercise regularly to keep body fit', '2025-06-01', 1, 'active'),
-        ('Professional Development', 'Get very good at data science oriented roles and skill building', '2025-08-01', 2, 'active'),
-        ('Professional Development', 'Master new codebase at job', '2025-07-01', 3, 'active')
+        CREATE TABLE ai_conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            user_message TEXT NOT NULL,
+            ai_response TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
         ''')
 
-        # Insert initial routine
+        # Create AI roadmaps table
         cursor.execute('''
-        INSERT INTO routines (time_block, activity, duration, energy_level, weekdays)
-        VALUES
-        ('6:45 AM', 'Wake up', 15, 'Medium', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('7:00 AM - 7:30 AM', 'Quick morning workout', 30, 'Medium', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('7:30 AM - 8:00 AM', 'Breakfast + preparation', 30, 'Medium', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('8:00 AM - 10:00 AM', 'Deep Work: Codebase learning', 120, 'High', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('10:00 AM - 11:00 AM', 'Team meetings/collaboration', 60, 'Medium', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('11:00 AM - 11:30 AM', 'Walk/movement break', 30, 'Low', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('11:30 AM - 1:00 PM', 'Lighter work tasks', 90, 'Low', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('1:00 PM - 1:45 PM', 'Lunch break', 45, 'Low', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('1:45 PM - 4:30 PM', 'Mixed work tasks', 165, 'Medium', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('4:30 PM - 5:30 PM', 'Admin work/planning', 60, 'Medium', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('5:30 PM - 7:00 PM', 'Data Science learning', 90, 'High', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('7:00 PM - 8:00 PM', 'Exercise', 60, 'Medium', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('8:00 PM - 9:00 PM', 'Dinner + relaxation', 60, 'Low', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('9:00 PM - 10:30 PM', 'Personal time', 90, 'Low', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('10:30 PM - 11:00 PM', 'Wind-down routine', 30, 'Low', 'Monday,Tuesday,Wednesday,Thursday,Friday'),
-        ('11:00 PM', 'Sleep', 0, 'Low', 'Monday,Tuesday,Wednesday,Thursday,Friday')
+        CREATE TABLE ai_roadmaps (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
         ''')
-
-        # Insert initial habits
-        cursor.execute('''
-        INSERT INTO habits (name, goal_id, frequency, streak, created_at)
-        VALUES
-        ('Morning workout', 1, 'daily', 0, ?),
-        ('Study data science', 2, 'daily', 0, ?),
-        ('Codebase review', 3, 'weekdays', 0, ?)
-        ''', (datetime.now().strftime('%Y-%m-%d'), datetime.now().strftime('%Y-%m-%d'), datetime.now().strftime('%Y-%m-%d')))
 
         conn.commit()
         return conn
     else:
         return sqlite3.connect('growth_navigator.db')
 
+# User session management
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_current_user():
+    if 'user_id' in session:
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+        conn.close()
+        return user
+    return None
+
+def get_partner():
+    user = get_current_user()
+    if user and user[4]:  # partner_id
+        conn = get_db_connection()
+        partner = conn.execute('SELECT * FROM users WHERE id = ?', (user[4],)).fetchone()
+        conn.close()
+        return partner
+    return None
+
 # Routes
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form['username']
+        name = request.form['name']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+
+        if password != confirm_password:
+            flash('Passwords do not match')
+            return render_template('signup.html')
+
+        conn = get_db_connection()
+
+        # Check if username already exists
+        existing_user = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+        if existing_user:
+            conn.close()
+            flash('Username already exists. Please choose another one.')
+            return render_template('signup.html')
+
+        # Create new user
+        conn.execute('INSERT INTO users (username, password, name, is_new_user) VALUES (?, ?, ?, ?)',
+                    (username, generate_password_hash(password), name, 1))
+        conn.commit()
+
+        # Get the new user's ID
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        conn.close()
+
+        # Log in the new user
+        session['user_id'] = user[0]
+        session['username'] = user[1]
+        session['name'] = user[3]
+
+        flash(f'Welcome, {name}! Your account has been created.')
+        return redirect(url_for('welcome'))
+
+    return render_template('signup.html')
+
+@app.route('/welcome')
+@login_required
+def welcome():
+    user_id = session['user_id']
+    conn = get_db_connection()
+
+    # Mark user as not new anymore
+    conn.execute('UPDATE users SET is_new_user = 0 WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+
+    return render_template('welcome.html', current_user=get_current_user(), partner=get_partner())
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+
+        if user and check_password_hash(user[2], password):
+            session['user_id'] = user[0]
+            session['username'] = user[1]
+            session['name'] = user[3]
+
+            # Check if this is a new user
+            is_new_user = user[5]
+            conn.close()
+
+            if is_new_user:
+                flash(f'Welcome back, {user[3]}!')
+                return redirect(url_for('welcome'))
+            else:
+                flash(f'Welcome back, {user[3]}!')
+                return redirect(url_for('index'))
+        else:
+            conn.close()
+            flash('Invalid username or password')
+
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out')
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def index():
+    user_id = session['user_id']
     conn = get_db_connection()
 
     # Get goals
-    goals = conn.execute('SELECT * FROM goals WHERE status = "active" ORDER BY priority').fetchall()
+    goals = conn.execute('SELECT * FROM goals WHERE user_id = ? AND status = "active" ORDER BY priority',
+                        (user_id,)).fetchall()
 
     # Get today's routine
     today_name = datetime.now().strftime('%A')
-    routines = conn.execute('SELECT * FROM routines WHERE weekdays LIKE ? ORDER BY time_block', (f'%{today_name}%',)).fetchall()
+    routines = conn.execute('SELECT * FROM routines WHERE user_id = ? AND weekdays LIKE ? ORDER BY time_block',
+                           (user_id, f'%{today_name}%')).fetchall()
 
     # Get habits
     habits = conn.execute('''
@@ -117,21 +259,29 @@ def index():
         (SELECT COUNT(*) FROM habit_logs hl WHERE hl.habit_id = h.id AND hl.completed_date = ?) as completed_today
         FROM habits h
         LEFT JOIN goals g ON h.goal_id = g.id
-    ''', (date.today().strftime('%Y-%m-%d'),)).fetchall()
+        WHERE h.user_id = ?
+    ''', (date.today().strftime('%Y-%m-%d'), user_id)).fetchall()
 
     conn.close()
 
-    return render_template('index.html', goals=goals, routines=routines, habits=habits, today=date.today().strftime('%Y-%m-%d'))
+    return render_template('index.html', goals=goals, routines=routines, habits=habits,
+                          today=date.today().strftime('%Y-%m-%d'),
+                          current_user=get_current_user(),
+                          partner=get_partner())
 
 @app.route('/goals')
+@login_required
 def view_goals():
+    user_id = session['user_id']
     conn = get_db_connection()
-    goals = conn.execute('SELECT * FROM goals ORDER BY priority').fetchall()
+    goals = conn.execute('SELECT * FROM goals WHERE user_id = ? ORDER BY priority', (user_id,)).fetchall()
     conn.close()
-    return render_template('goals.html', goals=goals)
+    return render_template('goals.html', goals=goals, current_user=get_current_user(), partner=get_partner())
 
 @app.route('/goals/add', methods=['GET', 'POST'])
+@login_required
 def add_goal():
+    user_id = session['user_id']
     if request.method == 'POST':
         category = request.form['category']
         description = request.form['description']
@@ -139,20 +289,27 @@ def add_goal():
         priority = request.form['priority']
 
         conn = get_db_connection()
-        conn.execute('INSERT INTO goals (category, description, deadline, priority, status) VALUES (?, ?, ?, ?, ?)',
-                    (category, description, deadline, priority, 'active'))
+        conn.execute('INSERT INTO goals (user_id, category, description, deadline, priority, status) VALUES (?, ?, ?, ?, ?, ?)',
+                    (user_id, category, description, deadline, priority, 'active'))
         conn.commit()
         conn.close()
 
         flash('Goal added successfully!')
         return redirect(url_for('view_goals'))
 
-    return render_template('add_goal.html')
+    return render_template('add_goal.html', current_user=get_current_user(), partner=get_partner())
 
 @app.route('/goals/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
 def edit_goal(id):
+    user_id = session['user_id']
     conn = get_db_connection()
-    goal = conn.execute('SELECT * FROM goals WHERE id = ?', (id,)).fetchone()
+    goal = conn.execute('SELECT * FROM goals WHERE id = ? AND user_id = ?', (id, user_id)).fetchone()
+
+    if not goal:
+        flash('Goal not found or you do not have permission to edit it')
+        conn.close()
+        return redirect(url_for('view_goals'))
 
     if request.method == 'POST':
         category = request.form['category']
@@ -161,8 +318,8 @@ def edit_goal(id):
         priority = request.form['priority']
         status = request.form['status']
 
-        conn.execute('UPDATE goals SET category = ?, description = ?, deadline = ?, priority = ?, status = ? WHERE id = ?',
-                    (category, description, deadline, priority, status, id))
+        conn.execute('UPDATE goals SET category = ?, description = ?, deadline = ?, priority = ?, status = ? WHERE id = ? AND user_id = ?',
+                    (category, description, deadline, priority, status, id, user_id))
         conn.commit()
         conn.close()
 
@@ -170,17 +327,21 @@ def edit_goal(id):
         return redirect(url_for('view_goals'))
 
     conn.close()
-    return render_template('edit_goal.html', goal=goal)
+    return render_template('edit_goal.html', goal=goal, current_user=get_current_user(), partner=get_partner())
 
 @app.route('/routines')
+@login_required
 def view_routines():
+    user_id = session['user_id']
     conn = get_db_connection()
-    routines = conn.execute('SELECT * FROM routines ORDER BY time_block').fetchall()
+    routines = conn.execute('SELECT * FROM routines WHERE user_id = ? ORDER BY time_block', (user_id,)).fetchall()
     conn.close()
-    return render_template('routines.html', routines=routines)
+    return render_template('routines.html', routines=routines, current_user=get_current_user(), partner=get_partner())
 
 @app.route('/routines/add', methods=['GET', 'POST'])
+@login_required
 def add_routine():
+    user_id = session['user_id']
     if request.method == 'POST':
         time_block = request.form['time_block']
         activity = request.form['activity']
@@ -189,20 +350,27 @@ def add_routine():
         weekdays = ','.join(request.form.getlist('weekdays'))
 
         conn = get_db_connection()
-        conn.execute('INSERT INTO routines (time_block, activity, duration, energy_level, weekdays) VALUES (?, ?, ?, ?, ?)',
-                    (time_block, activity, duration, energy_level, weekdays))
+        conn.execute('INSERT INTO routines (user_id, time_block, activity, duration, energy_level, weekdays) VALUES (?, ?, ?, ?, ?, ?)',
+                    (user_id, time_block, activity, duration, energy_level, weekdays))
         conn.commit()
         conn.close()
 
         flash('Routine activity added successfully!')
         return redirect(url_for('view_routines'))
 
-    return render_template('add_routine.html')
+    return render_template('add_routine.html', current_user=get_current_user(), partner=get_partner())
 
 @app.route('/routines/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
 def edit_routine(id):
+    user_id = session['user_id']
     conn = get_db_connection()
-    routine = conn.execute('SELECT * FROM routines WHERE id = ?', (id,)).fetchone()
+    routine = conn.execute('SELECT * FROM routines WHERE id = ? AND user_id = ?', (id, user_id)).fetchone()
+
+    if not routine:
+        flash('Routine not found or you do not have permission to edit it')
+        conn.close()
+        return redirect(url_for('view_routines'))
 
     if request.method == 'POST':
         time_block = request.form['time_block']
@@ -211,34 +379,39 @@ def edit_routine(id):
         energy_level = request.form['energy_level']
         weekdays = ','.join(request.form.getlist('weekdays'))
 
-        conn.execute('UPDATE routines SET time_block = ?, activity = ?, duration = ?, energy_level = ?, weekdays = ? WHERE id = ?',
-                    (time_block, activity, duration, energy_level, weekdays, id))
+        conn.execute('UPDATE routines SET time_block = ?, activity = ?, duration = ?, energy_level = ?, weekdays = ? WHERE id = ? AND user_id = ?',
+                    (time_block, activity, duration, energy_level, weekdays, id, user_id))
         conn.commit()
         conn.close()
 
         flash('Routine updated successfully!')
         return redirect(url_for('view_routines'))
 
-    weekdays = routine[5].split(',') if routine[5] else []
+    weekdays = routine[6].split(',') if routine[6] else []  # Adjusted index for user_id column
     conn.close()
-    return render_template('edit_routine.html', routine=routine, selected_weekdays=weekdays)
+    return render_template('edit_routine.html', routine=routine, selected_weekdays=weekdays, current_user=get_current_user(), partner=get_partner())
 
 @app.route('/habits')
+@login_required
 def view_habits():
+    user_id = session['user_id']
     conn = get_db_connection()
     habits = conn.execute('''
         SELECT h.*, g.description as goal_description
         FROM habits h
         LEFT JOIN goals g ON h.goal_id = g.id
+        WHERE h.user_id = ?
         ORDER BY h.name
-    ''').fetchall()
+    ''', (user_id,)).fetchall()
 
     # Get completion data for calendar view
     habit_logs = conn.execute('''
-        SELECT habit_id, completed_date, COUNT(*) as count
-        FROM habit_logs
-        GROUP BY habit_id, completed_date
-    ''').fetchall()
+        SELECT hl.habit_id, hl.completed_date, COUNT(*) as count
+        FROM habit_logs hl
+        JOIN habits h ON hl.habit_id = h.id
+        WHERE h.user_id = ?
+        GROUP BY hl.habit_id, hl.completed_date
+    ''', (user_id,)).fetchall()
 
     # Convert to format needed for calendar
     calendar_data = {}
@@ -253,18 +426,22 @@ def view_habits():
 
     conn.close()
 
-    return render_template('habits.html', habits=habits, calendar_data=json.dumps(calendar_data), today=date.today().strftime('%Y-%m-%d'))
+    return render_template('habits.html', habits=habits, calendar_data=calendar_data,
+                          today=date.today().strftime('%Y-%m-%d'),
+                          current_user=get_current_user(), partner=get_partner())
 
 @app.route('/habits/add', methods=['GET', 'POST'])
+@login_required
 def add_habit():
+    user_id = session['user_id']
     if request.method == 'POST':
         name = request.form['name']
         goal_id = request.form['goal_id'] if request.form['goal_id'] != '' else None
         frequency = request.form['frequency']
 
         conn = get_db_connection()
-        conn.execute('INSERT INTO habits (name, goal_id, frequency, streak, created_at) VALUES (?, ?, ?, ?, ?)',
-                    (name, goal_id, frequency, 0, datetime.now().strftime('%Y-%m-%d')))
+        conn.execute('INSERT INTO habits (user_id, name, goal_id, frequency, streak, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                    (user_id, name, goal_id, frequency, 0, datetime.now().strftime('%Y-%m-%d')))
         conn.commit()
         conn.close()
 
@@ -272,18 +449,27 @@ def add_habit():
         return redirect(url_for('view_habits'))
 
     conn = get_db_connection()
-    goals = conn.execute('SELECT id, description FROM goals WHERE status = "active"').fetchall()
+    goals = conn.execute('SELECT id, description FROM goals WHERE user_id = ? AND status = "active"', (user_id,)).fetchall()
     conn.close()
 
-    return render_template('add_habit.html', goals=goals)
+    return render_template('add_habit.html', goals=goals, current_user=get_current_user(), partner=get_partner())
 
 @app.route('/habits/log/<int:id>', methods=['POST'])
+@login_required
 def log_habit(id):
+    user_id = session['user_id']
     completed = request.form.get('completed', 'false') == 'true'
     today = date.today().strftime('%Y-%m-%d')
     notes = request.form.get('notes', '')
 
     conn = get_db_connection()
+
+    # Verify the habit belongs to the current user
+    habit = conn.execute('SELECT * FROM habits WHERE id = ? AND user_id = ?', (id, user_id)).fetchone()
+    if not habit:
+        flash('Habit not found or you do not have permission to log it')
+        conn.close()
+        return redirect(request.referrer or url_for('index'))
 
     # Check if already logged today
     existing = conn.execute('SELECT id FROM habit_logs WHERE habit_id = ? AND completed_date = ?',
@@ -318,9 +504,16 @@ def log_habit(id):
     return redirect(request.referrer or url_for('index'))
 
 @app.route('/habits/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
 def edit_habit(id):
+    user_id = session['user_id']
     conn = get_db_connection()
-    habit = conn.execute('SELECT * FROM habits WHERE id = ?', (id,)).fetchone()
+    habit = conn.execute('SELECT * FROM habits WHERE id = ? AND user_id = ?', (id, user_id)).fetchone()
+
+    if not habit:
+        flash('Habit not found or you do not have permission to edit it')
+        conn.close()
+        return redirect(url_for('view_habits'))
 
     if request.method == 'POST':
         name = request.form['name']
@@ -328,27 +521,36 @@ def edit_habit(id):
         frequency = request.form['frequency']
         streak = int(request.form['streak'])
 
-        conn.execute('UPDATE habits SET name = ?, goal_id = ?, frequency = ?, streak = ? WHERE id = ?',
-                    (name, goal_id, frequency, streak, id))
+        conn.execute('UPDATE habits SET name = ?, goal_id = ?, frequency = ?, streak = ? WHERE id = ? AND user_id = ?',
+                    (name, goal_id, frequency, streak, id, user_id))
         conn.commit()
         conn.close()
 
         flash('Habit updated successfully!')
         return redirect(url_for('view_habits'))
 
-    goals = conn.execute('SELECT id, description FROM goals WHERE status = "active"').fetchall()
+    goals = conn.execute('SELECT id, description FROM goals WHERE user_id = ? AND status = "active"', (user_id,)).fetchall()
     conn.close()
-    return render_template('edit_habit.html', habit=habit, goals=goals)
+    return render_template('edit_habit.html', habit=habit, goals=goals, current_user=get_current_user(), partner=get_partner())
 
 @app.route('/habits/delete/<int:id>', methods=['POST'])
+@login_required
 def delete_habit(id):
+    user_id = session['user_id']
     conn = get_db_connection()
+
+    # Verify the habit belongs to the current user
+    habit = conn.execute('SELECT * FROM habits WHERE id = ? AND user_id = ?', (id, user_id)).fetchone()
+    if not habit:
+        flash('Habit not found or you do not have permission to delete it')
+        conn.close()
+        return redirect(url_for('view_habits'))
 
     # Delete habit logs first (foreign key constraint)
     conn.execute('DELETE FROM habit_logs WHERE habit_id = ?', (id,))
 
     # Delete the habit
-    conn.execute('DELETE FROM habits WHERE id = ?', (id,))
+    conn.execute('DELETE FROM habits WHERE id = ? AND user_id = ?', (id, user_id))
 
     conn.commit()
     conn.close()
@@ -357,7 +559,9 @@ def delete_habit(id):
     return redirect(url_for('view_habits'))
 
 @app.route('/analytics')
+@login_required
 def analytics():
+    user_id = session['user_id']
     conn = get_db_connection()
 
     # Get habit completion rates
@@ -366,7 +570,8 @@ def analytics():
         (SELECT COUNT(*) FROM habit_logs hl WHERE hl.habit_id = h.id) as total_completions,
         (julianday('now') - julianday(h.created_at)) as days_since_creation
         FROM habits h
-    ''').fetchall()
+        WHERE h.user_id = ?
+    ''', (user_id,)).fetchall()
 
     habit_stats = []
     for habit in habits:
@@ -392,13 +597,160 @@ def analytics():
     energy_distribution = conn.execute('''
         SELECT energy_level, SUM(duration) as total_minutes
         FROM routines
-        WHERE weekdays LIKE ?
+        WHERE user_id = ? AND weekdays LIKE ?
         GROUP BY energy_level
-    ''', (f'%{today_name}%',)).fetchall()
+    ''', (user_id, f'%{today_name}%')).fetchall()
 
     conn.close()
 
-    return render_template('analytics.html', habit_stats=habit_stats, energy_distribution=energy_distribution)
+    return render_template('analytics.html', habit_stats=habit_stats, energy_distribution=energy_distribution,
+                          current_user=get_current_user(), partner=get_partner())
+
+# Partner view routes
+@app.route('/partner/habits')
+@login_required
+def view_partner_habits():
+    user = get_current_user()
+    if not user or not user[4]:  # Check if user has a partner
+        flash('No partner account is linked to your account')
+        return redirect(url_for('index'))
+
+    partner_id = user[4]
+    conn = get_db_connection()
+
+    # Get partner's habits
+    habits = conn.execute('''
+        SELECT h.*, g.description as goal_description
+        FROM habits h
+        LEFT JOIN goals g ON h.goal_id = g.id
+        WHERE h.user_id = ?
+        ORDER BY h.name
+    ''', (partner_id,)).fetchall()
+
+    # Get partner's habit completion data
+    habit_logs = conn.execute('''
+        SELECT hl.habit_id, hl.completed_date, COUNT(*) as count
+        FROM habit_logs hl
+        JOIN habits h ON hl.habit_id = h.id
+        WHERE h.user_id = ?
+        GROUP BY hl.habit_id, hl.completed_date
+    ''', (partner_id,)).fetchall()
+
+    # Convert to format needed for calendar
+    calendar_data = {}
+    for log in habit_logs:
+        habit_id = log[0]
+        completed_date = log[1]
+
+        if habit_id not in calendar_data:
+            calendar_data[habit_id] = []
+
+        calendar_data[habit_id].append(completed_date)
+
+    conn.close()
+
+    return render_template('partner_habits.html',
+                          habits=habits,
+                          calendar_data=calendar_data,
+                          today=date.today().strftime('%Y-%m-%d'),
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+# AI Roadmap routes
+@app.route('/ai_roadmap')
+@login_required
+def ai_roadmap():
+    user_id = session['user_id']
+    conn = get_db_connection()
+
+    # Get saved roadmaps
+    roadmaps = conn.execute('SELECT * FROM ai_roadmaps WHERE user_id = ? ORDER BY created_at DESC', (user_id,)).fetchall()
+
+    # Get conversation history
+    helper = get_ai_helper()
+    conversation_history = helper.get_conversation_history(user_id)
+
+    conn.close()
+
+    return render_template('ai_roadmap.html',
+                          roadmaps=roadmaps,
+                          conversation_history=conversation_history,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/ai_roadmap/chat', methods=['POST'])
+@login_required
+def ai_roadmap_chat():
+    user_id = session['user_id']
+    user_message = request.form['message']
+
+    # Get AI response
+    helper = get_ai_helper()
+    ai_response = helper.generate_response(user_message)
+
+    # Save conversation
+    helper.save_conversation(user_id, user_message, ai_response)
+
+    return jsonify({
+        'response': ai_response
+    })
+
+@app.route('/ai_roadmap/save', methods=['POST'])
+@login_required
+def save_roadmap():
+    user_id = session['user_id']
+    title = request.form['title']
+    content = request.form['content']
+
+    conn = get_db_connection()
+    conn.execute('INSERT INTO ai_roadmaps (user_id, title, content, created_at) VALUES (?, ?, ?, ?)',
+                (user_id, title, content, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit()
+    conn.close()
+
+    flash('Roadmap saved successfully!')
+    return redirect(url_for('ai_roadmap'))
+
+@app.route('/ai_roadmap/view/<int:id>')
+@login_required
+def view_roadmap(id):
+    user_id = session['user_id']
+    conn = get_db_connection()
+    roadmap = conn.execute('SELECT * FROM ai_roadmaps WHERE id = ? AND user_id = ?', (id, user_id)).fetchone()
+
+    if not roadmap:
+        flash('Roadmap not found or you do not have permission to view it')
+        conn.close()
+        return redirect(url_for('ai_roadmap'))
+
+    conn.close()
+
+    return render_template('view_roadmap.html',
+                          roadmap=roadmap,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/ai_roadmap/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_roadmap(id):
+    user_id = session['user_id']
+    conn = get_db_connection()
+
+    # Verify the roadmap belongs to the current user
+    roadmap = conn.execute('SELECT * FROM ai_roadmaps WHERE id = ? AND user_id = ?', (id, user_id)).fetchone()
+    if not roadmap:
+        flash('Roadmap not found or you do not have permission to delete it')
+        conn.close()
+        return redirect(url_for('ai_roadmap'))
+
+    # Delete the roadmap
+    conn.execute('DELETE FROM ai_roadmaps WHERE id = ? AND user_id = ?', (id, user_id))
+
+    conn.commit()
+    conn.close()
+
+    flash('Roadmap deleted successfully!')
+    return redirect(url_for('ai_roadmap'))
 
 if __name__ == '__main__':
     app.run(debug=True)
