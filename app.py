@@ -8,9 +8,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from ai_helper import AIHelper, create_env_file
 from gamification_helper import GamificationHelper
-
+import schema_updates_mood
 app = Flask(__name__)
 app.secret_key = "personal_growth_navigator_secret_key"
+
+# Update database schema for mood tracking
+schema_updates_mood.update_database_schema_for_mood()
 
 # Create .env file if it doesn't exist
 create_env_file()
@@ -296,14 +299,43 @@ def index():
     helper = get_gamification_helper()
     level_info = helper.get_user_level_info(user_id)
 
+    # Get mood history for the last 7 days
+    mood_history = conn.execute('''
+        SELECT mood_score, mood_note, energy_level, logged_at
+        FROM mood_logs
+        WHERE user_id = ?
+        ORDER BY logged_at DESC
+        LIMIT 7
+    ''', (user_id,)).fetchall()
+
+    # Format the mood history data
+    formatted_mood_history = []
+    for entry in mood_history:
+        formatted_mood_history.append({
+            'mood_score': entry[0],
+            'mood_note': entry[1],
+            'energy_level': entry[2],
+            'logged_at': datetime.strptime(entry[3], '%Y-%m-%d %H:%M:%S').strftime('%b %d, %Y')
+        })
+
+    # Check if mood logged today
+    today = date.today().strftime('%Y-%m-%d')
+    mood_today = conn.execute('''
+        SELECT mood_score FROM mood_logs
+        WHERE user_id = ? AND date(logged_at) = ?
+    ''', (user_id, today)).fetchone()
+
     conn.close()
 
     return render_template('index.html', goals=goals, routines=routines, habits=habits,
                           today=date.today().strftime('%Y-%m-%d'),
+                          now=datetime.now(),
                           current_user=get_current_user(),
                           partner=get_partner(),
                           level_info=level_info,
                           calendar_data=calendar_data,
+                          mood_history=formatted_mood_history,
+                          mood_today=mood_today[0] if mood_today else None,
                           use_custom_energy_legend=True)
 
 @app.route('/goals')
@@ -1137,6 +1169,18 @@ def log_habit(id):
 
     conn.close()
 
+    # Check for milestone
+    milestone = None
+    if completed and not existing and new_streak in [7, 30, 66, 100]:
+        milestone = {
+            'type': 'streak',
+            'message': f"You've reached a {new_streak}-day streak!",
+            'description': "Consistency is key to building lasting habits. Keep up the great work!",
+            'value': new_streak,
+            'label': 'Day Streak',
+            'habit_name': habit[2]
+        }
+
     # Check if this is an AJAX request
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
         return jsonify({
@@ -1144,10 +1188,233 @@ def log_habit(id):
             'completed': completed,
             'new_streak': new_streak,
             'new_achievements': [dict(a) for a in new_achievements],
-            'level_info': level_info
+            'level_info': level_info,
+            'milestone': milestone
         })
 
     return redirect(request.referrer or url_for('index'))
+
+# Mood tracking routes
+@app.route('/mood/log', methods=['POST'])
+@login_required
+def log_mood():
+    user_id = session['user_id']
+    mood_score = int(request.form.get('mood_score', 3))
+    energy_level = int(request.form.get('energy_level', 5))
+    mood_note = request.form.get('mood_note', '')
+
+    # Validate mood score
+    if mood_score < 1:
+        mood_score = 1
+    elif mood_score > 5:
+        mood_score = 5
+
+    # Validate energy level
+    if energy_level < 1:
+        energy_level = 1
+    elif energy_level > 10:
+        energy_level = 10
+
+    conn = get_db_connection()
+
+    # Check if already logged today
+    today = datetime.now().strftime('%Y-%m-%d')
+    existing = conn.execute('''
+        SELECT id FROM mood_logs
+        WHERE user_id = ? AND date(logged_at) = ?
+    ''', (user_id, today)).fetchone()
+
+    if existing:
+        # Update existing entry
+        conn.execute('''
+            UPDATE mood_logs
+            SET mood_score = ?, mood_note = ?, energy_level = ?, logged_at = ?
+            WHERE id = ?
+        ''', (mood_score, mood_note, energy_level, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), existing[0]))
+        message = "Mood updated for today!"
+    else:
+        # Create new entry
+        conn.execute('''
+            INSERT INTO mood_logs (user_id, mood_score, mood_note, energy_level, logged_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, mood_score, mood_note, energy_level, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        message = "Mood logged successfully!"
+
+    conn.commit()
+    conn.close()
+
+    flash(message)
+    return redirect(request.referrer or url_for('index'))
+
+@app.route('/mood/history')
+@login_required
+def mood_history():
+    user_id = session['user_id']
+    conn = get_db_connection()
+
+    # Get mood history for the last 30 days
+    mood_history = conn.execute('''
+        SELECT mood_score, mood_note, energy_level, logged_at
+        FROM mood_logs
+        WHERE user_id = ?
+        ORDER BY logged_at DESC
+        LIMIT 30
+    ''', (user_id,)).fetchall()
+
+    conn.close()
+
+    # Format the data for the template
+    formatted_history = []
+    for entry in mood_history:
+        formatted_history.append({
+            'mood_score': entry[0],
+            'mood_note': entry[1],
+            'energy_level': entry[2],
+            'logged_at': datetime.strptime(entry[3], '%Y-%m-%d %H:%M:%S').strftime('%b %d, %Y')
+        })
+
+    return render_template('mood_history.html',
+                          mood_history=formatted_history,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/weekly_summary')
+@login_required
+def weekly_summary():
+    user_id = session['user_id']
+    conn = get_db_connection()
+
+    # Calculate date range for the past week
+    end_date = date.today()
+    start_date = end_date - timedelta(days=7)
+
+    # Format dates for display
+    start_date_str = start_date.strftime('%b %d, %Y')
+    end_date_str = end_date.strftime('%b %d, %Y')
+
+    # Get habit completion rate for the week
+    total_habits = conn.execute('''
+        SELECT COUNT(*) FROM habits WHERE user_id = ?
+    ''', (user_id,)).fetchone()[0]
+
+    completed_habits = conn.execute('''
+        SELECT COUNT(DISTINCT habit_id) FROM habit_logs
+        WHERE habit_id IN (SELECT id FROM habits WHERE user_id = ?)
+        AND completed_date BETWEEN ? AND ?
+    ''', (user_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))).fetchone()[0]
+
+    habit_completion_rate = round((completed_habits / total_habits * 100) if total_habits > 0 else 0)
+
+    # Get XP earned this week
+    xp_earned = conn.execute('''
+        SELECT SUM(amount) FROM xp_transactions
+        WHERE user_id = ? AND created_at BETWEEN ? AND ?
+    ''', (user_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))).fetchone()[0] or 0
+
+    # Get focus minutes for the week
+    focus_minutes = conn.execute('''
+        SELECT SUM(duration) FROM routines
+        WHERE user_id = ? AND energy_level = 'High'
+    ''', (user_id,)).fetchone()[0] or 0
+
+    # Get top habits by streak
+    top_habits = conn.execute('''
+        SELECT name, streak FROM habits
+        WHERE user_id = ?
+        ORDER BY streak DESC
+        LIMIT 5
+    ''', (user_id,)).fetchall()
+
+    formatted_top_habits = []
+    for habit in top_habits:
+        formatted_top_habits.append({
+            'name': habit[0],
+            'streak': habit[1]
+        })
+
+    # Get mood data
+    mood_data = conn.execute('''
+        SELECT mood_score, energy_level, logged_at
+        FROM mood_logs
+        WHERE user_id = ? AND logged_at BETWEEN ? AND ?
+        ORDER BY logged_at
+    ''', (user_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))).fetchall()
+
+    # Calculate average mood
+    avg_mood = 0
+    highest_energy_day = "N/A"
+    highest_energy = 0
+
+    if mood_data:
+        total_mood = sum(entry[0] for entry in mood_data)
+        avg_mood = round(total_mood / len(mood_data), 1)
+
+        # Find day with highest energy
+        for entry in mood_data:
+            if entry[1] > highest_energy:
+                highest_energy = entry[1]
+                highest_energy_day = datetime.strptime(entry[2], '%Y-%m-%d %H:%M:%S').strftime('%A')
+
+    # Map average mood to text
+    mood_text_map = {
+        1: "Bad",
+        2: "Low",
+        3: "Okay",
+        4: "Good",
+        5: "Great"
+    }
+    avg_mood_text = mood_text_map.get(round(avg_mood)) if avg_mood > 0 else "N/A"
+
+    # Get achievements unlocked this week
+    achievements = conn.execute('''
+        SELECT a.name, a.description
+        FROM achievements a
+        JOIN user_achievements ua ON a.id = ua.achievement_id
+        WHERE ua.user_id = ? AND ua.unlocked_at BETWEEN ? AND ?
+    ''', (user_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))).fetchall()
+
+    formatted_achievements = []
+    for achievement in achievements:
+        formatted_achievements.append({
+            'name': achievement[0],
+            'description': achievement[1]
+        })
+
+    # Generate focus areas for next week
+    focus_areas = []
+
+    # If habit completion rate is low, suggest focusing on consistency
+    if habit_completion_rate < 70:
+        focus_areas.append("Improve habit consistency - try to complete more of your daily habits")
+
+    # If no mood logs, suggest tracking mood
+    if not mood_data:
+        focus_areas.append("Start tracking your mood daily to better understand your emotional patterns")
+
+    # If no achievements, suggest working towards one
+    if not achievements:
+        focus_areas.append("Work towards unlocking a new achievement")
+
+    # Always add a positive suggestion
+    focus_areas.append("Celebrate your progress and reflect on what's working well")
+
+    conn.close()
+
+    # Dashboard URL for the email
+    dashboard_url = request.url_root
+
+    return render_template('weekly_summary.html',
+                          start_date=start_date_str,
+                          end_date=end_date_str,
+                          habit_completion_rate=habit_completion_rate,
+                          xp_earned=xp_earned,
+                          focus_minutes=focus_minutes,
+                          top_habits=formatted_top_habits,
+                          avg_mood_text=avg_mood_text,
+                          highest_energy_day=highest_energy_day,
+                          achievements=formatted_achievements,
+                          focus_areas=focus_areas,
+                          dashboard_url=dashboard_url)
 
 if __name__ == '__main__':
     app.run(debug=True)

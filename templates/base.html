@@ -1141,6 +1141,11 @@
                                                 }
                                             }
                                         }
+
+                                        // Handle milestone celebration
+                                        if (data.milestone) {
+                                            showMilestoneCelebration(data.milestone);
+                                        }
                                     } else {
                                         console.error('Invalid response format:', data);
                                         alert('Error updating habit. Please try again.');
@@ -1163,7 +1168,53 @@
     });
     </script>
 
+    <!-- Include Achievement Notification Component -->
+    {% include 'components/achievement_notification.html' %}
+
+    <!-- Include Level Up Modal Component -->
+    {% include 'components/level_up_modal.html' %}
+
+    <!-- Include Milestone Celebration Component -->
+    {% include 'components/milestone_celebration.html' %}
+
     <!-- Custom JS -->
     {% block scripts %}{% endblock %}
+
+    <script>
+        // Add milestone celebration handling to the toggle-habit event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const originalToggleHabitHandlers = document.querySelectorAll('.toggle-habit');
+
+            originalToggleHabitHandlers.forEach(button => {
+                const originalClickHandler = button.onclick;
+
+                button.addEventListener('click', function(e) {
+                    const habitId = this.dataset.habitId;
+                    const completed = this.dataset.completed === 'true' ? 'false' : 'true';
+
+                    if (completed === 'true') {
+                        fetch(`/habits/log/${habitId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: `completed=${completed}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            // Check for milestone
+                            if (data.milestone) {
+                                showMilestoneCelebration(data.milestone);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking for milestone:', error);
+                        });
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

@@ -5,8 +5,38 @@
 <div class="container-fluid px-4 fade-in">
     <div class="row mb-4">
         <div class="col">
-            <h1 class="h3 mb-0 text-gray-800">Personal Growth Dashboard</h1>
-            <p class="mb-4">Welcome to your personal growth journey! Here's your progress at a glance.</p>
+            {% set current_hour = now.hour %}
+            {% if current_hour < 12 %}
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0 text-gray-800">Good Morning, {{ current_user[3] }}!</h1>
+                        <p class="mb-4">Start your day with intention. What's your focus for today?</p>
+                    </div>
+                    <a href="{{ url_for('weekly_summary') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-chart-line"></i> Weekly Summary
+                    </a>
+                </div>
+            {% elif current_hour < 17 %}
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0 text-gray-800">Good Afternoon, {{ current_user[3] }}!</h1>
+                        <p class="mb-4">Keep the momentum going. You're making progress!</p>
+                    </div>
+                    <a href="{{ url_for('weekly_summary') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-chart-line"></i> Weekly Summary
+                    </a>
+                </div>
+            {% else %}
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0 text-gray-800">Good Evening, {{ current_user[3] }}!</h1>
+                        <p class="mb-4">Time to reflect on your day and prepare for tomorrow.</p>
+                    </div>
+                    <a href="{{ url_for('weekly_summary') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-chart-line"></i> Weekly Summary
+                    </a>
+                </div>
+            {% endif %}
         </div>
     </div>
 
@@ -85,6 +115,13 @@
                 <div class="value">{{ focus_minutes }} min</div>
                 <div class="icon"><i class="fas fa-brain"></i></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Quick Wins Section -->
+    <div class="row mb-4 slide-in">
+        <div class="col-12">
+            {% include 'components/quick_wins.html' %}
         </div>
     </div>
 
@@ -212,6 +249,9 @@
                     {% endif %}
                 </div>
             </div>
+
+            <!-- Mood Tracker -->
+            {% include 'components/mood_tracker.html' %}
 
             <!-- Priority Goals -->
             <div class="card shadow mb-4">
