@@ -99,7 +99,7 @@ class AIHelper:
         """Initialize the AI Helper."""
         # Store the path to the database
         self.db_path = 'growth_navigator.db'
-        self.model = "llama3-8b-8192"  # Default model - using 8B parameter version
+        self.model = "llama3-70b-8192"  # Default model - using 8B parameter version
 
     def set_model(self, model_name):
         """Set the model to use for generation."""
