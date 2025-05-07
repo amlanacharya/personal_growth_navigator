@@ -209,15 +209,13 @@
                     if (week === 0) {
                         for (let i = 0; i < firstDayOfWeek; i++) {
                             calendarHTML += '<div class="calendar-day" style="visibility: hidden;"></div>';
-                            dayCounter++;
                         }
                     }
 
                     // Add days for this week
                     for (let day = (week === 0 ? firstDayOfWeek : 0); day < 7; day++) {
-                        const calendarIndex = dayCounter - firstDayOfWeek;
-                        if (calendarIndex < calendarDays.length) {
-                            const dayData = calendarDays[calendarIndex];
+                        if (dayCounter < calendarDays.length) {
+                            const dayData = calendarDays[dayCounter];
                             const intensity = dayData.completedHabits / habitIds.length;
 
                             let bgColor = 'bg-light';
