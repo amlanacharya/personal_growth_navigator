@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from ai_helper import AIHelper, create_env_file
+from gamification_helper import GamificationHelper
 
 app = Flask(__name__)
 app.secret_key = "personal_growth_navigator_secret_key"
@@ -22,6 +23,15 @@ def get_ai_helper():
     if ai_helper is None:
         ai_helper = AIHelper()
     return ai_helper
+
+# Initialize Gamification Helper
+gamification_helper = None
+
+def get_gamification_helper():
+    global gamification_helper
+    if gamification_helper is None:
+        gamification_helper = GamificationHelper()
+    return gamification_helper
 
 # Database setup
 def get_db_connection():
@@ -262,12 +272,38 @@ def index():
         WHERE h.user_id = ?
     ''', (date.today().strftime('%Y-%m-%d'), user_id)).fetchall()
 
+    # Get completion data for calendar view
+    habit_logs = conn.execute('''
+        SELECT hl.habit_id, hl.completed_date, COUNT(*) as count
+        FROM habit_logs hl
+        JOIN habits h ON hl.habit_id = h.id
+        WHERE h.user_id = ?
+        GROUP BY hl.habit_id, hl.completed_date
+    ''', (user_id,)).fetchall()
+
+    # Convert to format needed for calendar
+    calendar_data = {}
+    for log in habit_logs:
+        habit_id = log[0]
+        completed_date = log[1]
+
+        if habit_id not in calendar_data:
+            calendar_data[habit_id] = []
+
+        calendar_data[habit_id].append(completed_date)
+
+    # Get user level info
+    helper = get_gamification_helper()
+    level_info = helper.get_user_level_info(user_id)
+
     conn.close()
 
     return render_template('index.html', goals=goals, routines=routines, habits=habits,
                           today=date.today().strftime('%Y-%m-%d'),
                           current_user=get_current_user(),
                           partner=get_partner(),
+                          level_info=level_info,
+                          calendar_data=calendar_data,
                           use_custom_energy_legend=True)
 
 @app.route('/goals')
@@ -482,70 +518,7 @@ def add_habit():
 
     return render_template('add_habit.html', goals=goals, current_user=get_current_user(), partner=get_partner())
 
-@app.route('/habits/log/<int:id>', methods=['POST'])
-@login_required
-def log_habit(id):
-    user_id = session['user_id']
-    completed = request.form.get('completed', 'false') == 'true'
-    today = date.today().strftime('%Y-%m-%d')
-    notes = request.form.get('notes', '')
-
-    conn = get_db_connection()
-
-    # Verify the habit belongs to the current user
-    habit = conn.execute('SELECT * FROM habits WHERE id = ? AND user_id = ?', (id, user_id)).fetchone()
-    if not habit:
-        flash('Habit not found or you do not have permission to log it')
-        conn.close()
-        return redirect(request.referrer or url_for('index'))
-
-    # Check if already logged today
-    existing = conn.execute('SELECT id FROM habit_logs WHERE habit_id = ? AND completed_date = ?',
-                        (id, today)).fetchone()
-
-    # Get the current streak (at index 5, not 4)
-    current_streak = habit[5]  # Current streak
-    new_streak = int(current_streak)  # Ensure it's an integer
-
-    if completed:
-        if not existing:
-            # Add log
-            conn.execute('INSERT INTO habit_logs (habit_id, completed_date, notes) VALUES (?, ?, ?)',
-                        (id, today, notes))
-
-            # Update streak
-            new_streak = int(current_streak) + 1
-            conn.execute('UPDATE habits SET streak = ? WHERE id = ?', (new_streak, id))
-
-            conn.commit()
-            if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                flash('Habit marked as completed!')
-    else:
-        if existing:
-            # Remove log
-            conn.execute('DELETE FROM habit_logs WHERE habit_id = ? AND completed_date = ?',
-                        (id, today))
-
-            # Update streak (not reset to 0, just decrement)
-            if int(current_streak) > 0:
-                new_streak = int(current_streak) - 1
-                conn.execute('UPDATE habits SET streak = ? WHERE id = ?', (new_streak, id))
-
-            conn.commit()
-            if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                flash('Habit completion removed!')
-
-    conn.close()
-
-    # Check if this is an AJAX request
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
-        return jsonify({
-            'success': True,
-            'completed': completed,
-            'new_streak': new_streak
-        })
-
-    return redirect(request.referrer or url_for('index'))
+# Original log_habit function has been replaced with the gamified version below
 
 @app.route('/habits/quick_log')
 @login_required
@@ -1004,6 +977,177 @@ def save_extracted_routines():
     except json.JSONDecodeError:
         flash('Error processing routines data')
         return redirect(request.referrer or url_for('ai_roadmap'))
+
+# Gamification routes
+@app.route('/achievements')
+@login_required
+def view_achievements():
+    user_id = session['user_id']
+    helper = get_gamification_helper()
+
+    # Check for new achievements
+    new_achievements = helper.check_achievements(user_id)
+
+    # Get all achievements
+    achievements = helper.get_user_achievements(user_id)
+
+    # Get user level info
+    level_info = helper.get_user_level_info(user_id)
+
+    return render_template('achievements.html',
+                          achievements=achievements,
+                          level_info=level_info,
+                          new_achievements=new_achievements,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/challenges')
+@login_required
+def view_challenges():
+    user_id = session['user_id']
+    helper = get_gamification_helper()
+
+    # Get active challenges
+    active_challenges = helper.get_active_challenges(user_id)
+
+    # Get completed challenges
+    conn = get_db_connection()
+    completed_challenges = conn.execute('''
+        SELECT c.*, uc.completed_at
+        FROM challenges c
+        JOIN user_challenges uc ON c.id = uc.challenge_id
+        WHERE uc.user_id = ? AND uc.status = 'completed'
+        ORDER BY uc.completed_at DESC
+    ''', (user_id,)).fetchall()
+    conn.close()
+
+    return render_template('challenges.html',
+                          active_challenges=active_challenges,
+                          completed_challenges=completed_challenges,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/challenges/update', methods=['POST'])
+@login_required
+def update_challenge_progress():
+    user_id = session['user_id']
+    challenge_id = request.form.get('challenge_id')
+    progress = int(request.form.get('progress', 0))
+
+    if not challenge_id:
+        flash('Challenge ID is required')
+        return redirect(url_for('view_challenges'))
+
+    # Validate progress
+    if progress < 0:
+        progress = 0
+    elif progress > 100:
+        progress = 100
+
+    helper = get_gamification_helper()
+    helper.update_challenge_progress(user_id, challenge_id, progress)
+
+    flash('Challenge progress updated!')
+    return redirect(url_for('view_challenges'))
+
+@app.route('/check_achievements')
+@login_required
+def check_achievements():
+    user_id = session['user_id']
+    helper = get_gamification_helper()
+
+    # Check for new achievements
+    new_achievements = helper.check_achievements(user_id)
+
+    return jsonify({
+        'new_achievements': [dict(a) for a in new_achievements]
+    })
+
+# Award XP for completing habits
+@app.route('/habits/log/<int:id>', methods=['POST'])
+@login_required
+def log_habit(id):
+    user_id = session['user_id']
+    completed = request.form.get('completed', 'false') == 'true'
+    today = date.today().strftime('%Y-%m-%d')
+    notes = request.form.get('notes', '')
+
+    conn = get_db_connection()
+
+    # Verify the habit belongs to the current user
+    habit = conn.execute('SELECT * FROM habits WHERE id = ? AND user_id = ?', (id, user_id)).fetchone()
+    if not habit:
+        flash('Habit not found or you do not have permission to log it')
+        conn.close()
+        return redirect(request.referrer or url_for('index'))
+
+    # Check if already logged today
+    existing = conn.execute('SELECT id FROM habit_logs WHERE habit_id = ? AND completed_date = ?',
+                        (id, today)).fetchone()
+
+    # Get the current streak (at index 5, not 4)
+    current_streak = habit[5]  # Current streak
+    new_streak = int(current_streak)  # Ensure it's an integer
+
+    # Get gamification helper
+    helper = get_gamification_helper()
+
+    if completed:
+        if not existing:
+            # Add log
+            conn.execute('INSERT INTO habit_logs (habit_id, completed_date, notes) VALUES (?, ?, ?)',
+                        (id, today, notes))
+
+            # Update streak
+            new_streak = int(current_streak) + 1
+            conn.execute('UPDATE habits SET streak = ? WHERE id = ?', (new_streak, id))
+
+            # Award XP for completing a habit (10 XP per completion)
+            helper.award_xp(conn, user_id, 10, 'habit_completion', id, f"Completed habit: {habit[2]}")
+
+            # Check for streak milestones and award bonus XP
+            if new_streak in [7, 30, 66, 100]:
+                bonus_xp = new_streak  # XP equal to streak milestone
+                helper.award_xp(conn, user_id, bonus_xp, 'streak_milestone', id,
+                               f"Reached {new_streak}-day streak for habit: {habit[2]}")
+
+            conn.commit()
+            if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                flash('Habit marked as completed!')
+    else:
+        if existing:
+            # Remove log
+            conn.execute('DELETE FROM habit_logs WHERE habit_id = ? AND completed_date = ?',
+                        (id, today))
+
+            # Update streak (not reset to 0, just decrement)
+            if int(current_streak) > 0:
+                new_streak = int(current_streak) - 1
+                conn.execute('UPDATE habits SET streak = ? WHERE id = ?', (new_streak, id))
+
+            conn.commit()
+            if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                flash('Habit completion removed!')
+
+    # Check for new achievements
+    new_achievements = helper.check_achievements(user_id)
+
+    # Get user level info to check for level up
+    level_info = helper.get_user_level_info(user_id)
+
+    conn.close()
+
+    # Check if this is an AJAX request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
+        return jsonify({
+            'success': True,
+            'completed': completed,
+            'new_streak': new_streak,
+            'new_achievements': [dict(a) for a in new_achievements],
+            'level_info': level_info
+        })
+
+    return redirect(request.referrer or url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)
