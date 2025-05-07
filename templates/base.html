@@ -29,9 +29,10 @@
             background: linear-gradient(180deg, var(--primary-color) 10%, #224abe 100%);
             min-height: 100vh;
             position: fixed;
-            z-index: 1;
+            z-index: 1030;
             padding-top: 20px;
             width: 225px;
+            transition: transform 0.3s ease;
         }
 
         .sidebar .nav-link {
@@ -68,6 +69,97 @@
         .content-wrapper {
             margin-left: 225px;
             padding: 30px;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Mobile menu toggle button */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1040;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .content-wrapper {
+                margin-left: 0;
+                padding: 15px;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .habit-check {
+                font-size: 1.5rem; /* Larger touch targets */
+                padding: 5px;
+            }
+
+            /* Simplified tables for mobile */
+            .table-responsive table {
+                display: block;
+            }
+
+            .table-responsive thead {
+                display: none;
+            }
+
+            .table-responsive tbody tr {
+                display: block;
+                margin-bottom: 1rem;
+                border: 1px solid #e3e6f0;
+                border-radius: 5px;
+                padding: 0.5rem;
+            }
+
+            .table-responsive td {
+                display: block;
+                text-align: right;
+                padding: 0.5rem;
+                position: relative;
+                border-bottom: 1px solid #e3e6f0;
+            }
+
+            .table-responsive td:last-child {
+                border-bottom: none;
+            }
+
+            .table-responsive td:before {
+                content: attr(data-label);
+                float: left;
+                font-weight: bold;
+            }
+
+            /* Adjust card layouts */
+            .row [class*="col-"] {
+                margin-bottom: 15px;
+            }
+
+            /* Adjust quick action button */
+            .quick-action-fab {
+                bottom: 15px;
+                right: 15px;
+            }
         }
 
         .card {
@@ -264,12 +356,134 @@
             right: 20px;
             top: 15px;
         }
+
+        /* Onboarding styles */
+        .onboarding-tooltip {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            max-width: 300px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .onboarding-tooltip h5 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .onboarding-tooltip p {
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .onboarding-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .step-indicator {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .onboarding-highlight {
+            position: relative;
+            z-index: 9998;
+            box-shadow: 0 0 0 4px rgba(78, 115, 223, 0.5);
+            border-radius: 4px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(78, 115, 223, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(78, 115, 223, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(78, 115, 223, 0); }
+        }
+
+        /* Quick action button styles */
+        .quick-action-fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 999;
+        }
+
+        .quick-action-fab .btn {
+            width: 56px;
+            height: 56px;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quick-action-fab .btn i {
+            font-size: 1.5rem;
+        }
+
+        .quick-action-menu {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0);
+            transform-origin: bottom right;
+            transition: transform 0.3s ease;
+            opacity: 0;
+        }
+
+        .quick-action-menu.active {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .quick-action-item {
+            margin-bottom: 10px;
+            background: white;
+            padding: 12px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            color: var(--dark-color);
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+
+        .quick-action-item:hover {
+            transform: translateX(-5px);
+            color: var(--primary-color);
+        }
+
+        .quick-action-item i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .quick-habit-item {
+            transition: background-color 0.2s;
+        }
+
+        .quick-habit-item:hover {
+            background-color: #f8f9fc;
+        }
     </style>
 </head>
 <body>
+    <!-- Mobile Menu Toggle Button -->
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
     <div class="d-flex">
         <!-- Sidebar -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="sidebar-brand">
                 <i class="fas fa-mountain"></i> Growth Navigator
             </div>
@@ -352,10 +566,333 @@
         </div>
     </div>
 
+    <!-- Quick Action Button -->
+    <div class="quick-action-fab">
+        <button class="btn btn-primary rounded-circle" id="quick-action-btn">
+            <i class="fas fa-plus"></i>
+        </button>
+
+        <div class="quick-action-menu" id="quick-action-menu">
+            <a href="{{ url_for('add_goal') }}" class="quick-action-item">
+                <i class="fas fa-bullseye"></i> Add Goal
+            </a>
+            <a href="{{ url_for('add_habit') }}" class="quick-action-item">
+                <i class="fas fa-chart-line"></i> Add Habit
+            </a>
+            <a href="{{ url_for('add_routine') }}" class="quick-action-item">
+                <i class="fas fa-calendar-alt"></i> Add Routine
+            </a>
+            <a href="#" class="quick-action-item" id="quick-log-habit-btn">
+                <i class="fas fa-check"></i> Log Habits
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Log Habits Modal -->
+    <div class="modal fade" id="quickLogHabitsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Quick Log Habits</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="quick-habits-list">
+                        <!-- Will be populated dynamically -->
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Onboarding JS -->
+    <script>
+    function initOnboarding() {
+        // Check if user is new and hasn't dismissed onboarding
+        if (!localStorage.getItem('onboardingCompleted')) {
+            // Create onboarding overlay and steps
+            const steps = [
+                {
+                    element: '.sidebar-brand',
+                    title: 'Welcome to Growth Navigator!',
+                    content: 'This is your personal dashboard for tracking goals, habits, and routines.',
+                    position: 'right'
+                },
+                {
+                    element: '.nav-item:nth-child(2) .nav-link',
+                    title: 'Set Your Goals',
+                    content: 'Start by defining what you want to achieve in different areas of your life.',
+                    position: 'right'
+                },
+                {
+                    element: '.nav-item:nth-child(4) .nav-link',
+                    title: 'Track Your Habits',
+                    content: 'Daily habits help you make progress toward your goals consistently.',
+                    position: 'right'
+                },
+                {
+                    element: '.nav-item:nth-child(6) .nav-link',
+                    title: 'AI Roadmap',
+                    content: 'Get personalized recommendations for your growth journey from our AI assistant.',
+                    position: 'right'
+                }
+            ];
+
+            showOnboardingStep(0, steps);
+        }
+    }
+
+    function showOnboardingStep(index, steps) {
+        if (index >= steps.length) {
+            localStorage.setItem('onboardingCompleted', 'true');
+            return;
+        }
+
+        const step = steps[index];
+        const element = document.querySelector(step.element);
+
+        if (!element) {
+            showOnboardingStep(index + 1, steps); // Skip this step
+            return;
+        }
+
+        // Create tooltip element
+        const tooltip = document.createElement('div');
+        tooltip.className = 'onboarding-tooltip';
+        tooltip.innerHTML = `
+            <h5>${step.title}</h5>
+            <p>${step.content}</p>
+            <div class="onboarding-nav">
+                <span class="step-indicator">${index + 1}/${steps.length}</span>
+                <button class="btn btn-sm btn-outline-light" onclick="dismissOnboarding()">Skip</button>
+                <button class="btn btn-sm btn-primary" onclick="nextOnboardingStep(${index + 1})">Next</button>
+            </div>
+        `;
+
+        // Position tooltip
+        positionTooltip(tooltip, element, step.position);
+
+        // Add to DOM
+        document.body.appendChild(tooltip);
+
+        // Highlight the element
+        element.classList.add('onboarding-highlight');
+    }
+
+    function nextOnboardingStep(index) {
+        // Remove existing tooltips and highlights
+        document.querySelectorAll('.onboarding-tooltip').forEach(el => el.remove());
+        document.querySelectorAll('.onboarding-highlight').forEach(el => el.classList.remove('onboarding-highlight'));
+
+        // Show next step
+        const steps = [
+            {
+                element: '.sidebar-brand',
+                title: 'Welcome to Growth Navigator!',
+                content: 'This is your personal dashboard for tracking goals, habits, and routines.',
+                position: 'right'
+            },
+            {
+                element: '.nav-item:nth-child(2) .nav-link',
+                title: 'Set Your Goals',
+                content: 'Start by defining what you want to achieve in different areas of your life.',
+                position: 'right'
+            },
+            {
+                element: '.nav-item:nth-child(4) .nav-link',
+                title: 'Track Your Habits',
+                content: 'Daily habits help you make progress toward your goals consistently.',
+                position: 'right'
+            },
+            {
+                element: '.nav-item:nth-child(6) .nav-link',
+                title: 'AI Roadmap',
+                content: 'Get personalized recommendations for your growth journey from our AI assistant.',
+                position: 'right'
+            }
+        ];
+        showOnboardingStep(index, steps);
+    }
+
+    function dismissOnboarding() {
+        localStorage.setItem('onboardingCompleted', 'true');
+        document.querySelectorAll('.onboarding-tooltip').forEach(el => el.remove());
+        document.querySelectorAll('.onboarding-highlight').forEach(el => el.classList.remove('onboarding-highlight'));
+    }
+
+    function positionTooltip(tooltip, element, position) {
+        const rect = element.getBoundingClientRect();
+
+        // Set initial styles
+        tooltip.style.position = 'fixed';
+        tooltip.style.zIndex = '9999';
+
+        // Position based on specified direction
+        switch(position) {
+            case 'top':
+                tooltip.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+                tooltip.style.left = `${rect.left + rect.width/2}px`;
+                tooltip.style.transform = 'translateX(-50%)';
+                break;
+            case 'right':
+                tooltip.style.left = `${rect.right + 10}px`;
+                tooltip.style.top = `${rect.top + rect.height/2}px`;
+                tooltip.style.transform = 'translateY(-50%)';
+                break;
+            case 'bottom':
+                tooltip.style.top = `${rect.bottom + 10}px`;
+                tooltip.style.left = `${rect.left + rect.width/2}px`;
+                tooltip.style.transform = 'translateX(-50%)';
+                break;
+            case 'left':
+                tooltip.style.right = `${window.innerWidth - rect.left + 10}px`;
+                tooltip.style.top = `${rect.top + rect.height/2}px`;
+                tooltip.style.transform = 'translateY(-50%)';
+                break;
+        }
+    }
+
+    // Initialize onboarding when DOM is loaded
+    document.addEventListener('DOMContentLoaded', initOnboarding);
+
+    // Mobile menu toggle functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (mobileMenuToggle && sidebar) {
+            mobileMenuToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('show');
+                this.querySelector('i').classList.toggle('fa-bars');
+                this.querySelector('i').classList.toggle('fa-times');
+            });
+
+            // Close sidebar when clicking outside
+            document.addEventListener('click', function(event) {
+                if (window.innerWidth <= 768 &&
+                    !event.target.closest('.sidebar') &&
+                    !event.target.closest('.mobile-menu-toggle') &&
+                    sidebar.classList.contains('show')) {
+                    sidebar.classList.remove('show');
+                    mobileMenuToggle.querySelector('i').classList.add('fa-bars');
+                    mobileMenuToggle.querySelector('i').classList.remove('fa-times');
+                }
+            });
+        }
+    });
+
+    // Quick action button functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const quickActionBtn = document.getElementById('quick-action-btn');
+        const quickActionMenu = document.getElementById('quick-action-menu');
+        const quickLogHabitBtn = document.getElementById('quick-log-habit-btn');
+
+        if (!quickActionBtn) return; // Skip if button doesn't exist
+
+        // Toggle quick action menu
+        quickActionBtn.addEventListener('click', function() {
+            quickActionMenu.classList.toggle('active');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.quick-action-fab')) {
+                quickActionMenu.classList.remove('active');
+            }
+        });
+
+        // Quick log habits
+        if (quickLogHabitBtn) {
+            quickLogHabitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                quickActionMenu.classList.remove('active');
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('quickLogHabitsModal'));
+                modal.show();
+
+                // Fetch habits
+                fetch('/habits/quick_log')
+                    .then(response => response.json())
+                    .then(data => {
+                        const habitsList = document.getElementById('quick-habits-list');
+                        habitsList.innerHTML = '';
+
+                        if (data.habits.length === 0) {
+                            habitsList.innerHTML = '<div class="alert alert-info">No habits found. Add some habits first!</div>';
+                            return;
+                        }
+
+                        data.habits.forEach(habit => {
+                            const habitItem = document.createElement('div');
+                            habitItem.className = 'quick-habit-item d-flex justify-content-between align-items-center mb-3 p-2 border-bottom';
+
+                            const isCompleted = data.completed_today.includes(habit.id);
+
+                            habitItem.innerHTML = `
+                                <div>
+                                    <span class="habit-name">${habit.name}</span>
+                                    <small class="text-muted d-block">${habit.streak} day streak</small>
+                                </div>
+                                <button class="btn btn-sm ${isCompleted ? 'btn-success' : 'btn-outline-secondary'} toggle-habit"
+                                        data-habit-id="${habit.id}" data-completed="${isCompleted}">
+                                    <i class="fas ${isCompleted ? 'fa-check-circle' : 'fa-circle'}"></i>
+                                </button>
+                            `;
+
+                            habitsList.appendChild(habitItem);
+                        });
+
+                        // Add event listeners to toggle buttons
+                        document.querySelectorAll('.toggle-habit').forEach(button => {
+                            button.addEventListener('click', function() {
+                                const habitId = this.dataset.habitId;
+                                const completed = this.dataset.completed === 'true' ? 'false' : 'true';
+
+                                fetch(`/habits/log/${habitId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                    },
+                                    body: `completed=${completed}`
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        this.dataset.completed = completed;
+                                        this.classList.toggle('btn-success');
+                                        this.classList.toggle('btn-outline-secondary');
+                                        this.querySelector('i').classList.toggle('fa-check-circle');
+                                        this.querySelector('i').classList.toggle('fa-circle');
+
+                                        // Update streak count
+                                        const streakElem = this.parentElement.querySelector('small');
+                                        streakElem.textContent = `${data.new_streak} day streak`;
+                                    }
+                                });
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching habits:', error);
+                        const habitsList = document.getElementById('quick-habits-list');
+                        habitsList.innerHTML = '<div class="alert alert-danger">Error loading habits. Please try again.</div>';
+                    });
+            });
+        }
+    });
+    </script>
+
     <!-- Custom JS -->
     {% block scripts %}{% endblock %}
 </body>

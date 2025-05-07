@@ -19,7 +19,13 @@
                 <div class="card-body">
                     <form method="post" action="{{ url_for('add_goal') }}">
                         <div class="mb-3">
-                            <label for="category" class="form-label">Category</label>
+                            <label for="category" class="form-label">
+                                Category
+                                <span class="info-tooltip" data-bs-toggle="tooltip" data-bs-placement="top"
+                                      title="Categorizing your goals helps organize them and identify areas of focus">
+                                    <i class="fas fa-info-circle text-primary"></i>
+                                </span>
+                            </label>
                             <select class="form-select" id="category" name="category" required>
                                 <option value="" disabled selected>Select a category</option>
                                 <option value="Physical Fitness">Physical Fitness</option>
@@ -33,15 +39,34 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
+                            <label for="description" class="form-label">
+                                Description
+                                <span class="info-tooltip" data-bs-toggle="tooltip" data-bs-placement="top"
+                                      title="Make your goal specific, measurable, and time-bound. Example: 'Run a 5K in under 30 minutes by September'">
+                                    <i class="fas fa-info-circle text-primary"></i>
+                                </span>
+                            </label>
                             <textarea class="form-control" id="description" name="description" rows="3" required placeholder="What do you want to achieve?"></textarea>
+                            <div class="form-text">Good goals are specific, measurable, achievable, relevant, and time-bound (SMART).</div>
                         </div>
                         <div class="mb-3">
-                            <label for="deadline" class="form-label">Deadline (optional)</label>
+                            <label for="deadline" class="form-label">
+                                Deadline (optional)
+                                <span class="info-tooltip" data-bs-toggle="tooltip" data-bs-placement="top"
+                                      title="Setting a deadline creates urgency and helps you stay accountable">
+                                    <i class="fas fa-info-circle text-primary"></i>
+                                </span>
+                            </label>
                             <input type="date" class="form-control" id="deadline" name="deadline">
                         </div>
                         <div class="mb-3">
-                            <label for="priority" class="form-label">Priority (1 is highest)</label>
+                            <label for="priority" class="form-label">
+                                Priority (1 is highest)
+                                <span class="info-tooltip" data-bs-toggle="tooltip" data-bs-placement="top"
+                                      title="Focus on 1-3 high-priority goals at a time for best results">
+                                    <i class="fas fa-info-circle text-primary"></i>
+                                </span>
+                            </label>
                             <select class="form-select" id="priority" name="priority" required>
                                 <option value="1">1 - Highest</option>
                                 <option value="2">2 - High</option>
@@ -77,4 +102,16 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
 {% endblock %}

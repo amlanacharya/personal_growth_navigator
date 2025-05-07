@@ -501,6 +501,8 @@ def log_habit(id):
     existing = conn.execute('SELECT id FROM habit_logs WHERE habit_id = ? AND completed_date = ?',
                         (id, today)).fetchone()
 
+    new_streak = habit[4]  # Current streak
+
     if completed:
         if not existing:
             # Add log
@@ -508,26 +510,76 @@ def log_habit(id):
                         (id, today, notes))
 
             # Update streak
-            habit = conn.execute('SELECT streak FROM habits WHERE id = ?', (id,)).fetchone()
-            new_streak = int(habit[0]) + 1
+            new_streak = int(habit[4]) + 1
             conn.execute('UPDATE habits SET streak = ? WHERE id = ?', (new_streak, id))
 
             conn.commit()
-            flash('Habit marked as completed!')
+            if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                flash('Habit marked as completed!')
     else:
         if existing:
             # Remove log
             conn.execute('DELETE FROM habit_logs WHERE habit_id = ? AND completed_date = ?',
                         (id, today))
 
-            # Reset streak
-            conn.execute('UPDATE habits SET streak = 0 WHERE id = ?', (id,))
+            # Update streak (not reset to 0, just decrement)
+            if int(habit[4]) > 0:
+                new_streak = int(habit[4]) - 1
+                conn.execute('UPDATE habits SET streak = ? WHERE id = ?', (new_streak, id))
 
             conn.commit()
-            flash('Habit completion removed!')
+            if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                flash('Habit completion removed!')
 
     conn.close()
+
+    # Check if this is an AJAX request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
+        return jsonify({
+            'success': True,
+            'completed': completed,
+            'new_streak': new_streak
+        })
+
     return redirect(request.referrer or url_for('index'))
+
+@app.route('/habits/quick_log')
+@login_required
+def quick_log_habits():
+    user_id = session['user_id']
+    today = date.today().strftime('%Y-%m-%d')
+
+    conn = get_db_connection()
+
+    # Get all habits for the user
+    habits_data = conn.execute('''
+        SELECT id, name, streak FROM habits WHERE user_id = ? ORDER BY name
+    ''', (user_id,)).fetchall()
+
+    # Get habits completed today
+    completed_today = conn.execute('''
+        SELECT habit_id FROM habit_logs
+        WHERE habit_id IN (SELECT id FROM habits WHERE user_id = ?)
+        AND completed_date = ?
+    ''', (user_id, today)).fetchall()
+
+    conn.close()
+
+    # Format the data for JSON response
+    habits = []
+    for habit in habits_data:
+        habits.append({
+            'id': habit[0],
+            'name': habit[1],
+            'streak': habit[2]
+        })
+
+    completed_ids = [log[0] for log in completed_today]
+
+    return jsonify({
+        'habits': habits,
+        'completed_today': completed_ids
+    })
 
 @app.route('/habits/edit/<int:id>', methods=['GET', 'POST'])
 @login_required

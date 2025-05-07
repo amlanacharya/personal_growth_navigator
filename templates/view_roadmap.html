@@ -164,68 +164,89 @@
         // Function to extract items from the roadmap content
         function extractItems() {
             const roadmapContent = document.querySelector('.roadmap-content').textContent;
-
-            // Improved extraction logic
-            const goals = [];
-            const habits = [];
-            const routines = [];
-
-            // Look for structured sections
             const lines = roadmapContent.split('\n');
             let currentSection = null;
+            const goals = []; const habits = []; const routines = [];
 
-            for (const line of lines) {
-                const trimmedLine = line.trim();
+            // First pass - identify section boundaries precisely
+            const sections = {
+                goals: { start: -1, end: -1 },
+                habits: { start: -1, end: -1 },
+                routines: { start: -1, end: -1 }
+            };
 
-                // Skip empty lines
-                if (trimmedLine === '') continue;
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim().toLowerCase();
+                if (line.includes("## goals") || line === "goals:" || line.match(/^goals\s*$/)) {
+                    sections.goals.start = i;
+                } else if (line.includes("## habits") || line === "habits:" || line.match(/^habits\s*$/)) {
+                    if (sections.goals.start >= 0 && sections.goals.end < 0) sections.goals.end = i;
+                    sections.habits.start = i;
+                } else if (line.includes("## routines") || line === "routines:" || line.match(/^routines\s*$/)) {
+                    if (sections.habits.start >= 0 && sections.habits.end < 0) sections.habits.end = i;
+                    sections.routines.start = i;
+                } else if (line.includes("## notes") || line === "notes:" || line.match(/^notes\s*$/)) {
+                    if (sections.routines.start >= 0 && sections.routines.end < 0) sections.routines.end = i;
+                }
+            }
 
-                // Check for section headers (more robust detection)
-                if (trimmedLine.toLowerCase().includes('## goals') ||
-                    (trimmedLine.toLowerCase().includes('goal') &&
-                     (trimmedLine.includes(':') || trimmedLine.endsWith('s') || trimmedLine.endsWith('S')))) {
-                    currentSection = 'goals';
-                    continue;
-                } else if (trimmedLine.toLowerCase().includes('## habits') ||
-                           (trimmedLine.toLowerCase().includes('habit') &&
-                            (trimmedLine.includes(':') || trimmedLine.endsWith('s') || trimmedLine.endsWith('S')))) {
-                    currentSection = 'habits';
-                    continue;
-                } else if (trimmedLine.toLowerCase().includes('## routines') ||
-                           (trimmedLine.toLowerCase().includes('routine') &&
-                            (trimmedLine.includes(':') || trimmedLine.endsWith('s') || trimmedLine.endsWith('S')))) {
-                    currentSection = 'routines';
-                    continue;
+            // Set end boundaries for the last section if not already set
+            if (sections.goals.start >= 0 && sections.goals.end < 0) {
+                sections.goals.end = sections.habits.start >= 0 ? sections.habits.start : lines.length;
+            }
+            if (sections.habits.start >= 0 && sections.habits.end < 0) {
+                sections.habits.end = sections.routines.start >= 0 ? sections.routines.start : lines.length;
+            }
+            if (sections.routines.start >= 0 && sections.routines.end < 0) {
+                sections.routines.end = lines.length;
+            }
+
+            // Define item validation function
+            function isValidItem(text) {
+                // Exclude explanatory text, one-word items, etc.
+                if (!text || text.length < 3) return false;
+
+                // Exclude common explanatory phrases
+                const excludePhrases = ["here are", "these are", "you can", "for example"];
+                for (const phrase of excludePhrases) {
+                    if (text.toLowerCase().includes(phrase)) return false;
                 }
 
-                // Add items to the appropriate section
-                if (currentSection) {
-                    // Check for bullet points or numbered items
-                    if (trimmedLine.startsWith('-') || trimmedLine.startsWith('•') || trimmedLine.startsWith('*')) {
-                        const item = trimmedLine.substring(1).trim();
+                // Exclude very long text (likely paragraphs)
+                if (text.length > 150) return false;
 
-                        if (currentSection === 'goals' && item) {
-                            goals.push(item);
-                        } else if (currentSection === 'habits' && item) {
-                            habits.push(item);
-                        } else if (currentSection === 'routines' && item) {
-                            routines.push(item);
+                return true;
+            }
+
+            // Extract items based on section boundaries
+            function extractSectionItems(start, end, collection) {
+                if (start < 0) return;
+
+                for (let i = start + 1; i < end; i++) {
+                    const line = lines[i].trim();
+
+                    // Skip empty lines and section headers
+                    if (!line || line.startsWith("##") || line.match(/^[a-z]+:$/i)) continue;
+
+                    // Extract list items with better detection
+                    if (line.startsWith('-') || line.startsWith('•') || line.startsWith('*')) {
+                        const item = line.replace(/^[-•*]/, "").trim();
+                        if (isValidItem(item)) {
+                            collection.push(item);
                         }
-                    }
-                    // Check for numbered items (e.g., "1. Item")
-                    else if (trimmedLine.match(/^\d+[\.\)]\s+/)) {
-                        const item = trimmedLine.replace(/^\d+[\.\)]\s+/, '').trim();
-
-                        if (currentSection === 'goals' && item) {
-                            goals.push(item);
-                        } else if (currentSection === 'habits' && item) {
-                            habits.push(item);
-                        } else if (currentSection === 'routines' && item) {
-                            routines.push(item);
+                    } else if (line.match(/^\d+[.)]/) || line.match(/^[a-z][.)]/) || line.match(/^[ivx]+[.)]/) || line.match(/^[IVX]+[.)]/)) {
+                        // Handle numbered items (1., a., i., I., etc.)
+                        const item = line.replace(/^[a-zA-Z0-9ivxIVX]+[.)]\s*/, "").trim();
+                        if (isValidItem(item)) {
+                            collection.push(item);
                         }
                     }
                 }
             }
+
+            extractSectionItems(sections.goals.start, sections.goals.end, goals);
+            extractSectionItems(sections.habits.start, sections.habits.end, habits);
+            extractSectionItems(sections.routines.start, sections.routines.end, routines);
 
             // Display extracted items
             displayExtractedItems(goals, habits, routines);

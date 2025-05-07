@@ -10,6 +10,44 @@
         </div>
     </div>
 
+    <!-- User Guidance Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold"><i class="fas fa-lightbulb text-warning me-2"></i>Getting the Most from Your Growth Navigator</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Tips for Effective Questions:</h6>
+                            <ul class="mb-3">
+                                <li>Be specific about your goals and challenges</li>
+                                <li>Mention your current daily schedule and energy patterns</li>
+                                <li>Include key constraints (time, resources, commitments)</li>
+                                <li>Share what has/hasn't worked for you in the past</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-magic text-primary me-2"></i>Try These Effective Prompts:</h6>
+                            <div class="prompt-examples">
+                                <button class="btn btn-outline-primary btn-sm m-1" onclick="insertPrompt(this.textContent)">
+                                    Create a roadmap to improve my fitness and mental clarity while working full-time
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm m-1" onclick="insertPrompt(this.textContent)">
+                                    Help me build a morning routine to boost productivity. I typically wake at 6am and start work at 9am.
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm m-1" onclick="insertPrompt(this.textContent)">
+                                    Design habits to reduce stress and improve work-life balance for a busy parent
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Chat Interface -->
         <div class="col-lg-8 mb-4">
@@ -110,7 +148,7 @@
 
     <!-- Save Roadmap Modal -->
     <div class="modal fade" id="saveRoadmapModal" tabindex="-1" aria-labelledby="saveRoadmapModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="saveRoadmapModalLabel">Save Your Roadmap</h5>
@@ -122,6 +160,28 @@
                             <label for="roadmap-title" class="form-label">Roadmap Title</label>
                             <input type="text" class="form-control" id="roadmap-title" name="title" required>
                         </div>
+
+                        <ul class="nav nav-tabs" id="roadmapTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview-pane" type="button" role="tab">Preview</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit-pane" type="button" role="tab">Edit</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content p-3 border border-top-0 rounded-bottom mb-3">
+                            <div class="tab-pane fade show active" id="preview-pane" role="tabpanel">
+                                <div id="roadmap-preview"></div>
+                            </div>
+                            <div class="tab-pane fade" id="edit-pane" role="tabpanel">
+                                <div class="alert alert-info small">
+                                    <i class="fas fa-info-circle"></i> Maintain the section headers (## GOALS, ## HABITS, ## ROUTINES) for proper formatting.
+                                </div>
+                                <textarea class="form-control" id="roadmap-editor" rows="15"></textarea>
+                            </div>
+                        </div>
+
                         <input type="hidden" id="roadmap-content" name="content">
                     </div>
                     <div class="modal-footer">
@@ -271,13 +331,39 @@
             }
         });
 
+        // Function to format roadmap content for preview
+        function formatRoadmapContent(text) {
+            // Format section headers
+            let formattedText = text.replace(/## GOALS/gi, '<h4 class="mt-3 mb-2 text-primary"><i class="fas fa-bullseye me-2"></i>Goals</h4>');
+            formattedText = formattedText.replace(/## HABITS/gi, '<h4 class="mt-3 mb-2 text-warning"><i class="fas fa-calendar-check me-2"></i>Habits</h4>');
+            formattedText = formattedText.replace(/## ROUTINES/gi, '<h4 class="mt-3 mb-2 text-success"><i class="fas fa-clock me-2"></i>Routines</h4>');
+            formattedText = formattedText.replace(/## NOTES/gi, '<h4 class="mt-3 mb-2 text-secondary"><i class="fas fa-sticky-note me-2"></i>Notes</h4>');
+
+            // Format bullet points
+            formattedText = formattedText.replace(/- (.*?)(?=<br>|$)/g, '<div class="mb-2"><i class="fas fa-check text-success me-2"></i>$1</div>');
+
+            return formattedText;
+        }
+
         saveRoadmapBtn.addEventListener('click', function() {
-            // Set the content to be saved
+            // Set the content for preview
+            document.getElementById('roadmap-preview').innerHTML = formatRoadmapContent(lastAiResponse);
+
+            // Set the content for editing
+            document.getElementById('roadmap-editor').value = lastAiResponse;
+
+            // Set the initial hidden input value
             roadmapContent.value = lastAiResponse;
 
             // Show the modal
             const saveModal = new bootstrap.Modal(document.getElementById('saveRoadmapModal'));
             saveModal.show();
+        });
+
+        // Update content when editing
+        document.getElementById('roadmap-editor').addEventListener('input', function() {
+            roadmapContent.value = this.value;
+            document.getElementById('roadmap-preview').innerHTML = formatRoadmapContent(this.value);
         });
 
         // Add event listeners to question prompt buttons
@@ -288,6 +374,12 @@
                 sendMessage();
             });
         });
+
+        // Function to insert prompt text into the input field
+        function insertPrompt(text) {
+            userInput.value = text;
+            userInput.focus();
+        }
 
         // Style the chat interface
         const style = document.createElement('style');
