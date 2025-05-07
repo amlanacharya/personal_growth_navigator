@@ -85,13 +85,13 @@
                             {% set total_minutes = 0 %}
 
                             {% for routine in routines %}
-                                {% set total_minutes = total_minutes + routine[3]|int %}
-                                {% if routine[4] == 'High' %}
-                                    {% set high_percent = high_percent + routine[3]|int %}
-                                {% elif routine[4] == 'Medium' %}
-                                    {% set medium_percent = medium_percent + routine[3]|int %}
+                                {% set total_minutes = total_minutes + routine[4]|int %}
+                                {% if routine[5] == 'High' %}
+                                    {% set high_percent = high_percent + routine[4]|int %}
+                                {% elif routine[5] == 'Medium' %}
+                                    {% set medium_percent = medium_percent + routine[4]|int %}
                                 {% else %}
-                                    {% set low_percent = low_percent + routine[3]|int %}
+                                    {% set low_percent = low_percent + routine[4]|int %}
                                 {% endif %}
                             {% endfor %}
 
@@ -119,16 +119,16 @@
 
                         <div class="routine-container">
                             {% for routine in routines %}
-                                <div class="routine-block {{ routine[4]|lower }}">
+                                <div class="routine-block {{ routine[5]|lower }}">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <strong>{{ routine[1] }}</strong>
-                                        <span class="badge bg-{{ 'success' if routine[4] == 'High' else 'warning' if routine[4] == 'Medium' else 'secondary' }}">
-                                            {{ routine[4] }} Energy
+                                        <strong>{{ routine[2] }}</strong>
+                                        <span class="badge bg-{{ 'success' if routine[5] == 'High' else 'warning' if routine[5] == 'Medium' else 'secondary' }}">
+                                            {{ routine[5] }} Energy
                                         </span>
                                     </div>
-                                    <div>{{ routine[2] }}</div>
-                                    {% if routine[3]|int > 0 %}
-                                        <div class="small text-muted">{{ routine[3]|int }} minutes</div>
+                                    <div>{{ routine[3] }}</div>
+                                    {% if routine[4]|int > 0 %}
+                                        <div class="small text-muted">{{ routine[4]|int }} minutes</div>
                                     {% endif %}
                                 </div>
                             {% endfor %}
@@ -163,14 +163,14 @@
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <div>
                                         <form action="{{ url_for('log_habit', id=habit[0]) }}" method="post" class="d-inline">
-                                            <input type="hidden" name="completed" value="{{ 'false' if habit[6]|int > 0 else 'true' }}">
-                                            <span class="habit-check {{ 'completed' if habit[6]|int > 0 else '' }}" onclick="this.closest('form').submit();">
-                                                <i class="{{ 'fas fa-check-circle' if habit[6]|int > 0 else 'far fa-circle' }}"></i>
+                                            <input type="hidden" name="completed" value="{{ 'false' if habit[7]|int > 0 else 'true' }}">
+                                            <span class="habit-check {{ 'completed' if habit[7]|int > 0 else '' }}" onclick="this.closest('form').submit();">
+                                                <i class="{{ 'fas fa-check-circle' if habit[7]|int > 0 else 'far fa-circle' }}"></i>
                                             </span>
                                         </form>
-                                        <span class="ms-2">{{ habit[1] }}</span>
+                                        <span class="ms-2">{{ habit[2] }}</span>
                                     </div>
-                                    <span class="badge bg-primary">{{ habit[4]|int }} day streak</span>
+                                    <span class="badge bg-primary">{{ habit[5]|int }} day streak</span>
                                 </div>
                             {% endfor %}
                         </div>
@@ -200,12 +200,12 @@
                         {% for goal in goals[:3] %}
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div>
-                                    <h6 class="mb-0">{{ goal[2] }}</h6>
-                                    <div class="small text-muted">{{ goal[1] }}</div>
+                                    <h6 class="mb-0">{{ goal[3] }}</h6>
+                                    <div class="small text-muted">{{ goal[2] }}</div>
                                 </div>
                                 <div class="badge
                                     {{ 'bg-danger' if loop.index == 1 else 'bg-warning' if loop.index == 2 else 'bg-info' }}">
-                                    Priority {{ goal[4] }}
+                                    Priority {{ goal[5] }}
                                 </div>
                             </div>
                             {% if not loop.last %}
