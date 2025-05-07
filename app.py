@@ -8,12 +8,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from ai_helper import AIHelper, create_env_file
 from gamification_helper import GamificationHelper
+from ai_insights_helper import AIInsightsHelper
+from ai_notification_helper import AINotificationHelper
 import schema_updates_mood
+import schema_updates_ai_notifications
 app = Flask(__name__)
 app.secret_key = "personal_growth_navigator_secret_key"
 
-# Update database schema for mood tracking
+# Update database schema for mood tracking and AI notifications
 schema_updates_mood.update_database_schema_for_mood()
+schema_updates_ai_notifications.update_database_schema_for_ai_notifications()
 
 # Create .env file if it doesn't exist
 create_env_file()
@@ -35,6 +39,24 @@ def get_gamification_helper():
     if gamification_helper is None:
         gamification_helper = GamificationHelper()
     return gamification_helper
+
+# Initialize AI Insights Helper
+ai_insights_helper = None
+
+def get_ai_insights_helper():
+    global ai_insights_helper
+    if ai_insights_helper is None:
+        ai_insights_helper = AIInsightsHelper()
+    return ai_insights_helper
+
+# Initialize AI Notification Helper
+ai_notification_helper = None
+
+def get_ai_notification_helper():
+    global ai_notification_helper
+    if ai_notification_helper is None:
+        ai_notification_helper = AINotificationHelper()
+    return ai_notification_helper
 
 # Database setup
 def get_db_connection():
@@ -551,6 +573,52 @@ def add_habit():
     return render_template('add_habit.html', goals=goals, current_user=get_current_user(), partner=get_partner())
 
 # Original log_habit function has been replaced with the gamified version below
+
+@app.route('/habits/add_multiple', methods=['POST'])
+@login_required
+def add_multiple_habits():
+    user_id = session['user_id']
+    goal_id = request.form.get('goal_id')
+    selected_habits_json = request.form.get('selected_habits', '[]')
+
+    try:
+        selected_habits = json.loads(selected_habits_json)
+
+        if not selected_habits:
+            flash('No habits selected to add')
+            return redirect(url_for('view_habits'))
+
+        conn = get_db_connection()
+
+        # Verify the goal belongs to the current user if provided
+        if goal_id:
+            goal = conn.execute('SELECT id FROM goals WHERE id = ? AND user_id = ?', (goal_id, user_id)).fetchone()
+            if not goal:
+                flash('Goal not found or you do not have permission to add habits to it')
+                conn.close()
+                return redirect(url_for('view_habits'))
+
+        # Add each habit
+        for habit in selected_habits:
+            name = habit.get('name', '')
+            frequency = habit.get('frequency', 'daily')
+
+            # Handle custom frequency
+            if frequency == 'custom' and 'custom_days' in habit:
+                frequency = habit['custom_days']
+
+            conn.execute('INSERT INTO habits (user_id, name, goal_id, frequency, streak, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                        (user_id, name, goal_id, frequency, 0, datetime.now().strftime('%Y-%m-%d')))
+
+        conn.commit()
+        conn.close()
+
+        flash(f'Successfully added {len(selected_habits)} habits!')
+        return redirect(url_for('view_habits'))
+
+    except json.JSONDecodeError:
+        flash('Error processing habit data')
+        return redirect(url_for('view_habits'))
 
 @app.route('/habits/quick_log')
 @login_required
@@ -1415,6 +1483,391 @@ def weekly_summary():
                           achievements=formatted_achievements,
                           focus_areas=focus_areas,
                           dashboard_url=dashboard_url)
+
+# AI Insights routes
+@app.route('/get_ai_insights')
+@login_required
+def get_ai_insights():
+    user_id = session['user_id']
+    helper = get_ai_insights_helper()
+
+    # Get insights
+    insights = helper.get_insights(user_id)
+
+    return jsonify({
+        'insights': insights
+    })
+
+@app.route('/ai_habit_motivation/<int:habit_id>')
+@login_required
+def ai_habit_motivation(habit_id):
+    user_id = session['user_id']
+    conn = get_db_connection()
+
+    # Get habit details
+    habit = conn.execute('SELECT * FROM habits WHERE id = ? AND user_id = ?', (habit_id, user_id)).fetchone()
+
+    if not habit:
+        flash('Habit not found or you do not have permission to view it')
+        conn.close()
+        return redirect(url_for('view_habits'))
+
+    # Get goal if linked
+    goal = None
+    if habit[3]:  # goal_id
+        goal = conn.execute('SELECT description FROM goals WHERE id = ?', (habit[3],)).fetchone()
+
+    conn.close()
+
+    # Generate motivation content
+    helper = get_ai_helper()
+    prompt = f"""Generate motivational content to help the user maintain their habit of "{habit[2]}".
+
+    {f'This habit is linked to their goal: "{goal[0]}".' if goal else 'This habit is not linked to any specific goal.'}
+
+    The user has a current streak of {habit[5]} days.
+
+    Provide:
+    1. A brief motivational message (2-3 sentences)
+    2. Three specific tips to maintain this habit
+    3. A relevant quote about consistency or habit formation
+
+    Format your response in a conversational, encouraging tone."""
+
+    motivation = helper.generate_response(prompt)
+
+    return render_template('ai_habit_motivation.html',
+                          habit=habit,
+                          goal=goal,
+                          motivation=motivation,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/ai_suggest_habits/<int:goal_id>')
+@login_required
+def ai_suggest_habits(goal_id):
+    user_id = session['user_id']
+    conn = get_db_connection()
+
+    # Get goal details
+    goal = conn.execute('SELECT * FROM goals WHERE id = ? AND user_id = ?', (goal_id, user_id)).fetchone()
+
+    if not goal:
+        flash('Goal not found or you do not have permission to view it')
+        conn.close()
+        return redirect(url_for('view_goals'))
+
+    conn.close()
+
+    # Generate habit suggestions
+    helper = get_ai_insights_helper()
+    suggestions = helper.generate_ai_habit_suggestions(goal_id)
+
+    return render_template('ai_habit_suggestions.html',
+                          goal=goal,
+                          suggestions=suggestions,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/ai_energy_optimization')
+@login_required
+def ai_energy_optimization():
+    user_id = session['user_id']
+
+    # Generate energy optimization
+    helper = get_ai_insights_helper()
+    optimization = helper.generate_energy_optimization(user_id)
+
+    return render_template('ai_energy_optimization.html',
+                          optimization=optimization,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/ai_mood_suggestions')
+@login_required
+def ai_mood_suggestions():
+    user_id = session['user_id']
+    conn = get_db_connection()
+
+    # Get recent mood data
+    mood_data = conn.execute('''
+        SELECT mood_score, energy_level, mood_note, logged_at
+        FROM mood_logs
+        WHERE user_id = ?
+        ORDER BY logged_at DESC
+        LIMIT 7
+    ''', (user_id,)).fetchall()
+
+    conn.close()
+
+    # Format mood data for the AI
+    formatted_mood = []
+    for entry in mood_data:
+        formatted_mood.append({
+            'mood_score': entry[0],
+            'energy_level': entry[1],
+            'note': entry[2],
+            'date': datetime.strptime(entry[3], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d')
+        })
+
+    # Generate mood suggestions
+    helper = get_ai_helper()
+    prompt = f"""Based on the user's recent mood data, provide personalized suggestions to improve their wellbeing.
+
+Mood data (1=lowest, 5=highest; most recent first):
+{json.dumps(formatted_mood, indent=2)}
+
+Provide:
+1. A brief analysis of their mood patterns
+2. Three specific, actionable suggestions to improve their wellbeing
+3. One mindfulness or self-care exercise they could try today
+
+Format your response in a supportive, empathetic tone."""
+
+    suggestions = helper.generate_response(prompt)
+
+    return render_template('ai_mood_suggestions.html',
+                          mood_data=mood_data,
+                          suggestions=suggestions,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+# AI Notification routes
+@app.route('/ai/notifications/list')
+@login_required
+def list_notifications():
+    user_id = session['user_id']
+    helper = get_ai_notification_helper()
+
+    # Get notifications
+    include_read = request.args.get('include_read', 'false') == 'true'
+    limit = int(request.args.get('limit', 20))
+
+    notifications = helper.get_user_notifications(user_id, limit, include_read)
+
+    return jsonify({
+        'notifications': notifications
+    })
+
+@app.route('/ai/notifications/<int:notification_id>/read', methods=['POST'])
+@login_required
+def mark_notification_read(notification_id):
+    user_id = session['user_id']
+    helper = get_ai_notification_helper()
+
+    success = helper.mark_notification_read(notification_id, user_id)
+
+    return jsonify({
+        'success': success
+    })
+
+@app.route('/ai/notifications/mark-all-read', methods=['POST'])
+@login_required
+def mark_all_notifications_read():
+    user_id = session['user_id']
+    helper = get_ai_notification_helper()
+
+    success = helper.mark_all_notifications_read(user_id)
+
+    return jsonify({
+        'success': success
+    })
+
+@app.route('/ai/notifications/<int:notification_id>/snooze', methods=['POST'])
+@login_required
+def snooze_notification(notification_id):
+    user_id = session['user_id']
+    helper = get_ai_notification_helper()
+
+    hours = request.json.get('hours', 3) if request.is_json else 3
+
+    success = helper.snooze_notification(notification_id, user_id, hours)
+
+    return jsonify({
+        'success': success
+    })
+
+@app.route('/ai/notifications/<int:notification_id>/action', methods=['POST'])
+@login_required
+def notification_action(notification_id):
+    user_id = session['user_id']
+    helper = get_ai_notification_helper()
+
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'Invalid request format'})
+
+    action = request.json.get('action')
+
+    if action == 'dismiss':
+        success = helper.mark_notification_read(notification_id, user_id)
+    elif action == 'delete':
+        success = helper.delete_notification(notification_id, user_id)
+    elif action == 'complete_habit':
+        # Get the habit ID from the notification metadata
+        conn = get_db_connection()
+        notification = conn.execute('SELECT metadata FROM ai_notifications WHERE id = ? AND user_id = ?',
+                                  (notification_id, user_id)).fetchone()
+        conn.close()
+
+        if notification and notification['metadata']:
+            try:
+                metadata = json.loads(notification['metadata'])
+                habit_id = metadata.get('habit_id')
+
+                if habit_id:
+                    # Log the habit as completed
+                    conn = get_db_connection()
+                    today = date.today().strftime('%Y-%m-%d')
+
+                    # Check if already completed today
+                    existing = conn.execute('SELECT id FROM habit_logs WHERE habit_id = ? AND completed_date = ?',
+                                          (habit_id, today)).fetchone()
+
+                    if not existing:
+                        conn.execute('INSERT INTO habit_logs (habit_id, completed_date) VALUES (?, ?)',
+                                    (habit_id, today))
+
+                        # Update streak
+                        habit = conn.execute('SELECT streak FROM habits WHERE id = ?', (habit_id,)).fetchone()
+                        new_streak = habit['streak'] + 1
+                        conn.execute('UPDATE habits SET streak = ? WHERE id = ?', (new_streak, habit_id))
+
+                        conn.commit()
+
+                    conn.close()
+                    success = True
+                else:
+                    success = False
+            except json.JSONDecodeError:
+                success = False
+        else:
+            success = False
+    elif action == 'extend_deadline':
+        # Get the goal ID from the notification metadata
+        conn = get_db_connection()
+        notification = conn.execute('SELECT metadata FROM ai_notifications WHERE id = ? AND user_id = ?',
+                                  (notification_id, user_id)).fetchone()
+
+        if notification and notification['metadata']:
+            try:
+                metadata = json.loads(notification['metadata'])
+                goal_id = metadata.get('goal_id')
+
+                if goal_id:
+                    # Extend deadline by 7 days
+                    goal = conn.execute('SELECT deadline FROM goals WHERE id = ? AND user_id = ?',
+                                      (goal_id, user_id)).fetchone()
+
+                    if goal and goal['deadline']:
+                        current_deadline = datetime.strptime(goal['deadline'], '%Y-%m-%d')
+                        new_deadline = (current_deadline + timedelta(days=7)).strftime('%Y-%m-%d')
+
+                        conn.execute('UPDATE goals SET deadline = ? WHERE id = ?', (new_deadline, goal_id))
+                        conn.commit()
+                        success = True
+                    else:
+                        success = False
+                else:
+                    success = False
+            except json.JSONDecodeError:
+                success = False
+        else:
+            success = False
+
+        conn.close()
+    else:
+        # Generic action handling
+        success = helper.mark_notification_read(notification_id, user_id)
+
+    return jsonify({
+        'success': success
+    })
+
+@app.route('/ai/notifications/settings', methods=['GET', 'POST'])
+@login_required
+def notification_settings():
+    user_id = session['user_id']
+    helper = get_ai_notification_helper()
+
+    if request.method == 'POST':
+        settings = {
+            'insights_enabled': request.form.get('insights_enabled') == 'on',
+            'suggestions_enabled': request.form.get('suggestions_enabled') == 'on',
+            'alerts_enabled': request.form.get('alerts_enabled') == 'on',
+            'reminders_enabled': request.form.get('reminders_enabled') == 'on',
+            'email_notifications': request.form.get('email_notifications') == 'on',
+            'push_notifications': request.form.get('push_notifications') == 'on',
+            'quiet_hours_start': request.form.get('quiet_hours_start'),
+            'quiet_hours_end': request.form.get('quiet_hours_end')
+        }
+
+        success = helper.update_user_notification_settings(user_id, settings)
+
+        if success:
+            flash('Notification settings updated successfully')
+        else:
+            flash('Error updating notification settings')
+
+        return redirect(url_for('notification_settings'))
+
+    # Get current settings
+    settings = helper.get_user_notification_settings(user_id)
+
+    return render_template('ai_notification_settings.html',
+                          settings=settings,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/ai/notifications')
+@login_required
+def view_notifications():
+    user_id = session['user_id']
+    helper = get_ai_notification_helper()
+
+    # Get notifications
+    notifications = helper.get_user_notifications(user_id, 50, True)
+
+    # Check for new notifications
+    helper.check_notification_triggers(user_id)
+
+    return render_template('ai_notifications.html',
+                          notifications=notifications,
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
+@app.route('/check_notifications')
+@login_required
+def check_notifications():
+    user_id = session['user_id']
+    helper = get_ai_notification_helper()
+
+    # Check for new notifications
+    new_notification_ids = helper.check_notification_triggers(user_id)
+
+    # Get the new notifications
+    new_notifications = []
+    if new_notification_ids:
+        conn = get_db_connection()
+        for notification_id in new_notification_ids:
+            notification = conn.execute('SELECT * FROM ai_notifications WHERE id = ?', (notification_id,)).fetchone()
+            if notification:
+                notification_dict = dict(notification)
+
+                # Parse actions JSON
+                if notification_dict['actions']:
+                    try:
+                        notification_dict['actions'] = json.loads(notification_dict['actions'])
+                    except json.JSONDecodeError:
+                        notification_dict['actions'] = []
+                else:
+                    notification_dict['actions'] = []
+
+                new_notifications.append(notification_dict)
+        conn.close()
+
+    return jsonify({
+        'new_notifications': new_notifications
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
