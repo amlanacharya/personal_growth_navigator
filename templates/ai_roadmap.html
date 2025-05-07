@@ -27,6 +27,27 @@
                                 <li>Include key constraints (time, resources, commitments)</li>
                                 <li>Share what has/hasn't worked for you in the past</li>
                             </ul>
+                            <div class="card shadow-sm mt-3">
+                                <div class="card-header py-2 bg-light">
+                                    <h6 class="m-0 small"><i class="fas fa-info-circle text-primary me-2"></i>For Better Results, Include:</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="question-prompts d-flex flex-wrap">
+                                        <button class="question-prompt" data-question="My top 3 goals are:">
+                                            <i class="fas fa-bullseye"></i> Goals
+                                        </button>
+                                        <button class="question-prompt" data-question="My daily schedule is:">
+                                            <i class="fas fa-calendar-day"></i> Schedule
+                                        </button>
+                                        <button class="question-prompt" data-question="My energy levels are highest during:">
+                                            <i class="fas fa-battery-three-quarters"></i> Energy
+                                        </button>
+                                        <button class="question-prompt" data-question="My current challenges include:">
+                                            <i class="fas fa-mountain"></i> Challenges
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <h6><i class="fas fa-magic text-primary me-2"></i>Try These Effective Prompts:</h6>
@@ -40,6 +61,29 @@
                                 <button class="btn btn-outline-primary btn-sm m-1" onclick="insertPrompt(this.textContent)">
                                     Design habits to reduce stress and improve work-life balance for a busy parent
                                 </button>
+                            </div>
+
+                            <div class="example-message mt-3">
+                                <div class="example-toggle card shadow-sm">
+                                    <div class="card-header py-2 d-flex align-items-center">
+                                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                                        <span class="small">See example of an effective message</span>
+                                        <i class="fas fa-chevron-down ms-auto"></i>
+                                    </div>
+                                    <div class="example-content card-body p-0" style="display: none;">
+                                        <div class="bg-light p-3 rounded">
+                                            <p>I need help creating a personal growth plan with these specifics:</p>
+                                            <p><strong>Goals:</strong> 1) Join a gym and get fit (I'm 35, newly hired as software engineer) 2) Improve data science skills from basic to coding proficiency 3) Master new codebase at work efficiently</p>
+                                            <p><strong>Schedule:</strong> Wake at 7am, sleep at 12am, currently unstructured routine</p>
+                                            <p><strong>Energy:</strong> Peak energy 8-10am and 5:30-7:30pm, energy dip around 11am</p>
+                                            <p><strong>Challenges:</strong> Difficulty focusing for long periods, prioritizing important tasks</p>
+                                            <p><strong>Non-negotiables:</strong> Work-life balance, health improvement, financial discipline</p>
+                                        </div>
+                                        <div class="p-2 text-center">
+                                            <button class="btn btn-sm btn-primary use-example-btn">Use This Example</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -168,17 +212,47 @@
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit-pane" type="button" role="tab">Edit</button>
                             </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="format-tab" data-bs-toggle="tab" data-bs-target="#format-pane" type="button" role="tab">Format Helper</button>
+                            </li>
                         </ul>
 
                         <div class="tab-content p-3 border border-top-0 rounded-bottom mb-3">
                             <div class="tab-pane fade show active" id="preview-pane" role="tabpanel">
-                                <div id="roadmap-preview"></div>
+                                <div id="roadmap-preview" class="formatted-content"></div>
                             </div>
                             <div class="tab-pane fade" id="edit-pane" role="tabpanel">
                                 <div class="alert alert-info small">
                                     <i class="fas fa-info-circle"></i> Maintain the section headers (## GOALS, ## HABITS, ## ROUTINES) for proper formatting.
                                 </div>
                                 <textarea class="form-control" id="roadmap-editor" rows="15"></textarea>
+                            </div>
+                            <div class="tab-pane fade" id="format-pane" role="tabpanel">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> If the AI response isn't properly formatted, use this helper to fix it.
+                                </div>
+                                <div class="format-helper">
+                                    <button class="btn btn-sm btn-primary mb-2" id="fix-format-btn">Auto-Format Content</button>
+
+                                    <div class="section-creator mb-3">
+                                        <h6>Add Missing Sections</h6>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="addSection('## GOALS')">Add Goals Section</button>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="addSection('## HABITS')">Add Habits Section</button>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="addSection('## ROUTINES')">Add Routines Section</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="section-editor mb-3">
+                                        <h6>Add Items From Response</h6>
+                                        <p class="small text-muted">Highlight text in the editor, then click to convert it to a formatted item.</p>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-success" onclick="convertToItem('goal')">Add as Goal</button>
+                                            <button class="btn btn-sm btn-outline-warning" onclick="convertToItem('habit')">Add as Habit</button>
+                                            <button class="btn btn-sm btn-outline-info" onclick="convertToItem('routine')">Add as Routine</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -268,16 +342,38 @@
                     const saveTooltip = document.createElement('div');
                     saveTooltip.className = 'save-tooltip';
                     saveTooltip.innerHTML = `
-                        <i class="fas fa-lightbulb text-warning"></i>
-                        <span>This looks like a complete roadmap! Click "Save Roadmap" to save it for future reference.</span>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>
+                            <span>This looks like a complete roadmap! Click "Save Roadmap" to save it for future reference.</span>
+                            <button type="button" class="btn-close ms-2 btn-close-sm" aria-label="Close"></button>
+                        </div>
                     `;
-                    messageDiv.appendChild(saveTooltip);
+
+                    // Add event listener to close button
+                    saveTooltip.querySelector('.btn-close').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (saveTooltip.parentNode) {
+                            saveTooltip.parentNode.removeChild(saveTooltip);
+                        }
+                    });
+
+                    // Add the tooltip to the message content instead of the message div
+                    const messageContent = messageDiv.querySelector('.message-content');
+                    messageContent.style.position = 'relative';
+                    messageContent.appendChild(saveTooltip);
 
                     // Highlight the save button
                     saveRoadmapBtn.classList.add('btn-pulse');
                     setTimeout(() => {
                         saveRoadmapBtn.classList.remove('btn-pulse');
                     }, 5000);
+
+                    // Auto-hide the tooltip after 8 seconds
+                    setTimeout(() => {
+                        if (saveTooltip.parentNode) {
+                            saveTooltip.parentNode.removeChild(saveTooltip);
+                        }
+                    }, 8000);
                 }
             }
         }
@@ -366,12 +462,164 @@
             document.getElementById('roadmap-preview').innerHTML = formatRoadmapContent(this.value);
         });
 
+        // Format helper functions
+        function addSection(sectionHeader) {
+            const editor = document.getElementById('roadmap-editor');
+            const currentContent = editor.value;
+
+            // Check if section already exists
+            if (currentContent.includes(sectionHeader)) {
+                alert('This section already exists in the content.');
+                return;
+            }
+
+            // Add section at the end
+            editor.value = currentContent + '\n\n' + sectionHeader + '\n- Add your item here\n';
+            roadmapContent.value = editor.value;
+            document.getElementById('roadmap-preview').innerHTML = formatRoadmapContent(editor.value);
+        }
+
+        function convertToItem(itemType) {
+            const editor = document.getElementById('roadmap-editor');
+            const selStart = editor.selectionStart;
+            const selEnd = editor.selectionEnd;
+
+            if (selStart === selEnd) {
+                alert('Please select some text to convert first.');
+                return;
+            }
+
+            const selectedText = editor.value.substring(selStart, selEnd).trim();
+
+            // Find the appropriate section in the text
+            let sectionHeader;
+            let sectionSearchPattern;
+
+            if (itemType === 'goal') {
+                sectionHeader = '## GOALS';
+                sectionSearchPattern = /## GOALS\s*\n/i;
+            } else if (itemType === 'habit') {
+                sectionHeader = '## HABITS';
+                sectionSearchPattern = /## HABITS\s*\n/i;
+            } else {
+                sectionHeader = '## ROUTINES';
+                sectionSearchPattern = /## ROUTINES\s*\n/i;
+            }
+
+            const content = editor.value;
+            const sectionMatch = content.match(sectionSearchPattern);
+
+            if (!sectionMatch) {
+                // Section doesn't exist, create it
+                editor.value = content + '\n\n' + sectionHeader + '\n- ' + selectedText + '\n';
+            } else {
+                // Find the end of the section
+                const sectionStart = sectionMatch.index + sectionMatch[0].length;
+                let sectionEnd = content.indexOf('##', sectionStart);
+                if (sectionEnd === -1) sectionEnd = content.length;
+
+                // Insert the item at the end of the section
+                const newContent =
+                    content.substring(0, sectionEnd) +
+                    '- ' + selectedText + '\n' +
+                    content.substring(sectionEnd);
+
+                editor.value = newContent;
+            }
+
+            roadmapContent.value = editor.value;
+            document.getElementById('roadmap-preview').innerHTML = formatRoadmapContent(editor.value);
+        }
+
+        // Auto-format function
+        document.getElementById('fix-format-btn').addEventListener('click', function() {
+            const editor = document.getElementById('roadmap-editor');
+            const content = editor.value;
+
+            // Extract possible sections
+            const lines = content.split('\n');
+            let formattedContent = '';
+
+            // Look for an introduction (first few lines)
+            let introEnd = Math.min(5, lines.length);
+            formattedContent = lines.slice(0, introEnd).join('\n') + '\n\n';
+
+            // Check if sections exist
+            const hasGoals = content.match(/## GOALS/i);
+            const hasHabits = content.match(/## HABITS/i);
+            const hasRoutines = content.match(/## ROUTINES/i);
+
+            // If sections don't exist, try to identify and create them
+            if (!hasGoals) {
+                formattedContent += '## GOALS\n';
+
+                // Look for possible goals (using keywords)
+                const goalKeywords = ['goal', 'aim', 'objective', 'target', 'achieve'];
+                for (let i = introEnd; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line && goalKeywords.some(keyword => line.toLowerCase().includes(keyword))) {
+                        if (!line.startsWith('-')) {
+                            formattedContent += '- ' + line + '\n';
+                        } else {
+                            formattedContent += line + '\n';
+                        }
+                    }
+                }
+                formattedContent += '\n';
+            }
+
+            if (!hasHabits) {
+                formattedContent += '## HABITS\n';
+
+                // Look for possible habits (using keywords)
+                const habitKeywords = ['habit', 'daily', 'routine', 'regular', 'practice'];
+                for (let i = introEnd; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line && habitKeywords.some(keyword => line.toLowerCase().includes(keyword))) {
+                        if (!line.startsWith('-')) {
+                            formattedContent += '- ' + line + '\n';
+                        } else {
+                            formattedContent += line + '\n';
+                        }
+                    }
+                }
+                formattedContent += '\n';
+            }
+
+            if (!hasRoutines) {
+                formattedContent += '## ROUTINES\n';
+
+                // Look for possible routines (using time patterns)
+                const timePattern = /\d{1,2}:\d{2}|\d{1,2}(am|pm)|morning|afternoon|evening/i;
+                for (let i = introEnd; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line && timePattern.test(line)) {
+                        if (!line.startsWith('-')) {
+                            formattedContent += '- ' + line + '\n';
+                        } else {
+                            formattedContent += line + '\n';
+                        }
+                    }
+                }
+                formattedContent += '\n';
+            }
+
+            // If we already have the sections, keep the original content
+            if (hasGoals || hasHabits || hasRoutines) {
+                formattedContent = content;
+            }
+
+            editor.value = formattedContent;
+            roadmapContent.value = formattedContent;
+            document.getElementById('roadmap-preview').innerHTML = formatRoadmapContent(formattedContent);
+        });
+
         // Add event listeners to question prompt buttons
         document.querySelectorAll('.question-prompt').forEach(button => {
             button.addEventListener('click', function() {
                 const question = this.getAttribute('data-question');
                 userInput.value = question;
-                sendMessage();
+                userInput.focus();
             });
         });
 
@@ -380,6 +628,23 @@
             userInput.value = text;
             userInput.focus();
         }
+
+        // Add event listener for example toggle
+        document.querySelector('.example-toggle').addEventListener('click', function() {
+            const content = document.querySelector('.example-content');
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+            this.querySelector('.fas.fa-chevron-down').classList.toggle('fa-chevron-up');
+        });
+
+        // Add event listener for use example button
+        document.querySelector('.use-example-btn').addEventListener('click', function() {
+            const exampleText = document.querySelector('.example-content .bg-light').textContent.trim();
+            userInput.value = exampleText;
+            userInput.focus();
+            // Close the example content
+            document.querySelector('.example-content').style.display = 'none';
+            document.querySelector('.fas.fa-chevron-down').classList.remove('fa-chevron-up');
+        });
 
         // Style the chat interface
         const style = document.createElement('style');
@@ -490,7 +755,7 @@
 
             .save-tooltip {
                 position: absolute;
-                top: -40px;
+                top: 10px;
                 right: 10px;
                 background-color: #fff;
                 border: 1px solid #e3e6f0;
@@ -499,8 +764,18 @@
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
                 font-size: 0.85rem;
                 z-index: 10;
-                max-width: 250px;
+                max-width: 300px;
                 animation: fadeInDown 0.5s ease-in-out;
+            }
+
+            .btn-close-sm {
+                font-size: 0.65rem;
+                padding: 0.25rem;
+                opacity: 0.5;
+            }
+
+            .btn-close-sm:hover {
+                opacity: 1;
             }
 
             @keyframes fadeInDown {

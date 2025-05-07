@@ -67,33 +67,36 @@ Communication Style:
 * Balance optimization with well-being and sustainability
 
 IMPORTANT FORMATTING INSTRUCTIONS:
-When providing a roadmap or plan, always structure your response with these requirements:
+When providing a roadmap or plan, you MUST structure your response in this exact format:
 
-1. Start with a brief personalized introduction (maximum 2-3 sentences).
+1. Start with a VERY brief introduction (maximum 2 sentences).
 
-2. Then provide a clear, structured roadmap with these distinct sections:
+2. Then provide a structured roadmap with these EXACT section headers:
 
 ## GOALS
-- Each goal must be specific, measurable, and actionable (10 words maximum per goal)
-- Focus on outcomes, not processes
-- Avoid explanations within the goal list
-- 3-5 goals maximum
+- [Specific, measurable goal - maximum 12 words]
+- [Specific, measurable goal - maximum 12 words]
+- [Specific, measurable goal - maximum 12 words]
 
 ## HABITS
-- Each habit must be a single, concrete daily action (8 words maximum)
-- Begin each habit with an action verb
-- Specify frequency when relevant (e.g., "Meditate for 10 minutes daily")
-- 3-7 habits maximum
+- [Single concrete daily action - maximum 8 words]
+- [Single concrete daily action - maximum 8 words]
+- [Single concrete daily action - maximum 8 words]
 
 ## ROUTINES
-- Structure as time blocks with specific activities
-- Format as "Time: Activity" (e.g., "7:00 AM: Morning meditation")
-- Group by morning, afternoon, evening
-- 4-8 routine items maximum
+- [Time]: [Specific activity]
+- [Time]: [Specific activity]
+- [Time]: [Specific activity]
 
-3. End with a brief conclusion (1-2 sentences maximum).
+3. Only AFTER these structured sections, you may provide additional context, explanations, or implementation strategies in a separate section:
 
-After the structured sections, you may add a separate "## NOTES" section with any explanations or additional context if needed.
+## NOTES
+- Additional context or explanations here
+- Implementation strategies here
+
+ALL goals, habits, and routines MUST be formatted as single-line bullet points starting with a hyphen (-).
+Do NOT include explanatory text within these sections.
+Each item should be specific, actionable, and concise.
 
 This structured format is essential as it allows the system to properly extract and display your recommendations to the user. Always use the exact section headers (## GOALS, ## HABITS, ## ROUTINES) and bullet points as shown above.
 
@@ -239,8 +242,7 @@ class AIHelper:
 
     def extract_roadmap_items(self, ai_response):
         """
-        Extract goals, habits, and routines from the AI response.
-        This implementation looks for the structured format defined in the system prompt.
+        Extract goals, habits, and routines from the AI response with improved parsing.
 
         Args:
             ai_response (str): The AI's response
@@ -256,30 +258,65 @@ class AIHelper:
 
         # Split the response into lines for processing
         lines = ai_response.split('\n')
-        current_section = None
 
-        for line in lines:
-            line = line.strip()
+        # First identify section boundaries
+        section_starts = {
+            "goals": -1,
+            "habits": -1,
+            "routines": -1
+        }
 
-            # Skip empty lines
-            if not line:
-                continue
+        section_ends = {
+            "goals": -1,
+            "habits": -1,
+            "routines": -1
+        }
 
-            # Check for section headers using the exact format from the prompt
-            if line.lower() == "## goals":
-                current_section = "goals"
-                continue
-            elif line.lower() == "## habits":
-                current_section = "habits"
-                continue
-            elif line.lower() == "## routines":
-                current_section = "routines"
-                continue
+        for i, line in enumerate(lines):
+            line = line.strip().lower()
 
-            # Add items to the appropriate section
-            if current_section and line.startswith('-'):
-                item = line[1:].strip()
-                roadmap[current_section].append(item)
+            if line == "## goals":
+                section_starts["goals"] = i
+            elif line == "## habits":
+                if section_starts["goals"] >= 0 and section_ends["goals"] < 0:
+                    section_ends["goals"] = i
+                section_starts["habits"] = i
+            elif line == "## routines":
+                if section_starts["habits"] >= 0 and section_ends["habits"] < 0:
+                    section_ends["habits"] = i
+                section_starts["routines"] = i
+            elif line.startswith("##") and section_starts["routines"] >= 0 and section_ends["routines"] < 0:
+                # Another section after routines (like ## NOTES)
+                section_ends["routines"] = i
+
+        # Set end boundaries for sections without explicit end
+        if section_ends["goals"] < 0 and section_starts["habits"] >= 0:
+            section_ends["goals"] = section_starts["habits"]
+        if section_ends["habits"] < 0 and section_starts["routines"] >= 0:
+            section_ends["habits"] = section_starts["routines"]
+        if section_ends["routines"] < 0:
+            section_ends["routines"] = len(lines)
+
+        # Extract items from each section
+        for section_name in ["goals", "habits", "routines"]:
+            start = section_starts[section_name]
+            end = section_ends[section_name]
+
+            if start >= 0 and end > start:
+                for i in range(start + 1, end):
+                    line = lines[i].strip()
+
+                    # Skip empty lines
+                    if not line:
+                        continue
+
+                    # Only extract properly formatted items (bullet points)
+                    if line.startswith('-'):
+                        item = line[1:].strip()
+
+                        # Filter out non-actionable items
+                        if self._is_valid_item(item):
+                            roadmap[section_name].append(item)
 
         # If the structured format wasn't found, try a more flexible approach
         if not any(roadmap.values()):
@@ -306,13 +343,41 @@ class AIHelper:
                 if current_section and (line.startswith('-') or line.startswith('•') or line.startswith('*')):
                     # Remove the bullet point character and any leading/trailing whitespace
                     item = line[1:].strip()
-                    roadmap[current_section].append(item)
+                    if self._is_valid_item(item):
+                        roadmap[current_section].append(item)
                 # Also try to capture numbered items
                 elif current_section and (line[0].isdigit() and line[1:3] in ['. ', ') ']):
                     item = line[line.find(' ')+1:].strip()
-                    roadmap[current_section].append(item)
+                    if self._is_valid_item(item):
+                        roadmap[current_section].append(item)
 
         return roadmap
+
+    def _is_valid_item(self, text):
+        """
+        Validate if an extracted item is actionable and properly formatted.
+
+        Args:
+            text (str): The text to validate
+
+        Returns:
+            bool: True if the item is valid, False otherwise
+        """
+        # Skip empty items
+        if not text or len(text) < 3:
+            return False
+
+        # Exclude explanatory phrases often seen in AI responses
+        exclude_phrases = ["here are", "these are", "you can", "for example", "etc.", "such as"]
+        for phrase in exclude_phrases:
+            if phrase in text.lower():
+                return False
+
+        # Skip very lengthy items (likely paragraphs)
+        if len(text) > 100:
+            return False
+
+        return True
 
 # Helper function to create a .env file if it doesn't exist
 def create_env_file():

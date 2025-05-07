@@ -501,7 +501,9 @@ def log_habit(id):
     existing = conn.execute('SELECT id FROM habit_logs WHERE habit_id = ? AND completed_date = ?',
                         (id, today)).fetchone()
 
-    new_streak = habit[4]  # Current streak
+    # Get the current streak (at index 5, not 4)
+    current_streak = habit[5]  # Current streak
+    new_streak = int(current_streak)  # Ensure it's an integer
 
     if completed:
         if not existing:
@@ -510,7 +512,7 @@ def log_habit(id):
                         (id, today, notes))
 
             # Update streak
-            new_streak = int(habit[4]) + 1
+            new_streak = int(current_streak) + 1
             conn.execute('UPDATE habits SET streak = ? WHERE id = ?', (new_streak, id))
 
             conn.commit()
@@ -523,8 +525,8 @@ def log_habit(id):
                         (id, today))
 
             # Update streak (not reset to 0, just decrement)
-            if int(habit[4]) > 0:
-                new_streak = int(habit[4]) - 1
+            if int(current_streak) > 0:
+                new_streak = int(current_streak) - 1
                 conn.execute('UPDATE habits SET streak = ? WHERE id = ?', (new_streak, id))
 
             conn.commit()

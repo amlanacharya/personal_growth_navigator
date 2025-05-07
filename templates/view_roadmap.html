@@ -165,7 +165,6 @@
         function extractItems() {
             const roadmapContent = document.querySelector('.roadmap-content').textContent;
             const lines = roadmapContent.split('\n');
-            let currentSection = null;
             const goals = []; const habits = []; const routines = [];
 
             // First pass - identify section boundaries precisely
@@ -177,20 +176,41 @@
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim().toLowerCase();
-                if (line.includes("## goals") || line === "goals:" || line.match(/^goals\s*$/)) {
+
+                if (line === "## goals") {
                     sections.goals.start = i;
-                } else if (line.includes("## habits") || line === "habits:" || line.match(/^habits\s*$/)) {
+                } else if (line === "## habits") {
                     if (sections.goals.start >= 0 && sections.goals.end < 0) sections.goals.end = i;
                     sections.habits.start = i;
-                } else if (line.includes("## routines") || line === "routines:" || line.match(/^routines\s*$/)) {
+                } else if (line === "## routines") {
                     if (sections.habits.start >= 0 && sections.habits.end < 0) sections.habits.end = i;
                     sections.routines.start = i;
-                } else if (line.includes("## notes") || line === "notes:" || line.match(/^notes\s*$/)) {
-                    if (sections.routines.start >= 0 && sections.routines.end < 0) sections.routines.end = i;
+                } else if (line.startsWith("##") && sections.routines.start >= 0 && sections.routines.end < 0) {
+                    // Any other section header after routines (like ## NOTES)
+                    sections.routines.end = i;
                 }
             }
 
-            // Set end boundaries for the last section if not already set
+            // If exact section headers weren't found, try more flexible matching
+            if (sections.goals.start < 0 || sections.habits.start < 0 || sections.routines.start < 0) {
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim().toLowerCase();
+
+                    if ((line.includes("## goals") || line === "goals:" || line.match(/^goals\s*$/)) && sections.goals.start < 0) {
+                        sections.goals.start = i;
+                    } else if ((line.includes("## habits") || line === "habits:" || line.match(/^habits\s*$/)) && sections.habits.start < 0) {
+                        if (sections.goals.start >= 0 && sections.goals.end < 0) sections.goals.end = i;
+                        sections.habits.start = i;
+                    } else if ((line.includes("## routines") || line === "routines:" || line.match(/^routines\s*$/)) && sections.routines.start < 0) {
+                        if (sections.habits.start >= 0 && sections.habits.end < 0) sections.habits.end = i;
+                        sections.routines.start = i;
+                    } else if ((line.includes("## notes") || line === "notes:" || line.match(/^notes\s*$/)) && sections.routines.start >= 0 && sections.routines.end < 0) {
+                        sections.routines.end = i;
+                    }
+                }
+            }
+
+            // Set end boundaries for sections without explicit end
             if (sections.goals.start >= 0 && sections.goals.end < 0) {
                 sections.goals.end = sections.habits.start >= 0 ? sections.habits.start : lines.length;
             }
@@ -201,26 +221,26 @@
                 sections.routines.end = lines.length;
             }
 
-            // Define item validation function
+            // Define item validation function with improved filtering
             function isValidItem(text) {
-                // Exclude explanatory text, one-word items, etc.
+                // Skip empty items
                 if (!text || text.length < 3) return false;
 
-                // Exclude common explanatory phrases
-                const excludePhrases = ["here are", "these are", "you can", "for example"];
+                // Exclude explanatory phrases often seen in AI responses
+                const excludePhrases = ["here are", "these are", "you can", "for example", "etc.", "such as"];
                 for (const phrase of excludePhrases) {
                     if (text.toLowerCase().includes(phrase)) return false;
                 }
 
-                // Exclude very long text (likely paragraphs)
-                if (text.length > 150) return false;
+                // Skip very lengthy items (likely paragraphs)
+                if (text.length > 100) return false;
 
                 return true;
             }
 
-            // Extract items based on section boundaries
+            // Extract items based on section boundaries with improved detection
             function extractSectionItems(start, end, collection) {
-                if (start < 0) return;
+                if (start < 0 || end <= start) return;
 
                 for (let i = start + 1; i < end; i++) {
                     const line = lines[i].trim();

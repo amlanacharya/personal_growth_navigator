@@ -863,12 +863,14 @@
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-Requested-With': 'XMLHttpRequest'
                                     },
                                     body: `completed=${completed}`
                                 })
                                 .then(response => response.json())
                                 .then(data => {
-                                    if (data.success) {
+                                    // Check if the response is valid
+                                    if (data && data.success !== undefined) {
                                         this.dataset.completed = completed;
                                         this.classList.toggle('btn-success');
                                         this.classList.toggle('btn-outline-secondary');
@@ -878,7 +880,14 @@
                                         // Update streak count
                                         const streakElem = this.parentElement.querySelector('small');
                                         streakElem.textContent = `${data.new_streak} day streak`;
+                                    } else {
+                                        console.error('Invalid response format:', data);
+                                        alert('Error updating habit. Please try again.');
                                     }
+                                })
+                                .catch(error => {
+                                    console.error('Error logging habit:', error);
+                                    alert('Error updating habit. Please try again.');
                                 });
                             });
                         });
