@@ -10,6 +10,33 @@
         </div>
     </div>
 
+    <!-- Growth Visualization -->
+    <div class="row mb-4 slide-in">
+        <div class="col-12">
+            {% set max_streak = 0 %}
+            {% for habit in habits %}
+                {% if habit[5]|int > max_streak %}
+                    {% set max_streak = habit[5]|int %}
+                {% endif %}
+            {% endfor %}
+
+            {% set total_completions = 0 %}
+            {% for habit in habits %}
+                {% set habit_id = habit[0] %}
+                {% if calendar_data and habit_id in calendar_data %}
+                    {% set total_completions = total_completions + calendar_data[habit_id]|length %}
+                {% endif %}
+            {% endfor %}
+
+            {% set achievements_unlocked = 0 %}
+            {% if level_info %}
+                {% set achievements_unlocked = level_info.level * 3 %}  <!-- Rough estimate based on level -->
+            {% endif %}
+
+            {% include 'components/growth_visualization.html' %}
+        </div>
+    </div>
+
     <!-- Stats Row -->
     <div class="row mb-4 slide-in">
         <!-- Active Goals -->
@@ -25,12 +52,6 @@
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="stat-card success">
                 <div class="heading">Best Habit Streak</div>
-                {% set max_streak = 0 %}
-                {% for habit in habits %}
-                    {% if habit[4]|int > max_streak %}
-                        {% set max_streak = habit[4]|int %}
-                    {% endif %}
-                {% endfor %}
                 <div class="value">{{ max_streak }} days</div>
                 <div class="icon"><i class="fas fa-fire"></i></div>
             </div>
@@ -42,7 +63,7 @@
                 <div class="heading">Today's Habits</div>
                 {% set completed = 0 %}
                 {% for habit in habits %}
-                    {% if habit[6]|int > 0 %}
+                    {% if habit[7]|int > 0 %}
                         {% set completed = completed + 1 %}
                     {% endif %}
                 {% endfor %}
@@ -57,8 +78,8 @@
                 <div class="heading">Today's Focus Minutes</div>
                 {% set focus_minutes = 0 %}
                 {% for routine in routines %}
-                    {% if routine[4] == 'High' %}
-                        {% set focus_minutes = focus_minutes + routine[3] %}
+                    {% if routine[5] == 'High' %}
+                        {% set focus_minutes = focus_minutes + routine[4]|int %}
                     {% endif %}
                 {% endfor %}
                 <div class="value">{{ focus_minutes }} min</div>
