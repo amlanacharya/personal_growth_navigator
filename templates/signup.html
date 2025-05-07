@@ -9,14 +9,43 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            /* Main theme colors - more sophisticated palette for 25-45 demographic */
+            --primary-color: #2c3e50;      /* Deep navy blue - more mature than the previous blue */
+            --secondary-color: #16a085;    /* Muted teal - less saturated than previous green */
+            --accent-color: #d35400;       /* Burnt orange - more sophisticated than yellow */
+            --danger-color: #c0392b;       /* Deep red - less harsh than previous red */
+            --dark-color: #34495e;         /* Slate - richer than previous gray */
+            --light-color: #f5f7fa;        /* Off-white - warmer than previous background */
+
+            /* Supporting colors */
+            --muted-color: #7f8c8d;        /* Muted gray for secondary text */
+            --success-light: rgba(22, 160, 133, 0.1);
+            --accent-light: rgba(211, 84, 0, 0.1);
+            --muted-light: rgba(127, 140, 141, 0.1);
+
+            /* Theme variables */
+            --bg-primary: var(--light-color);
+            --bg-secondary: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border-color: #ecf0f1;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+            --shadow-color-hover: rgba(0, 0, 0, 0.08);
+        }
+
         body {
-            background-color: #f8f9fc;
-            font-family: 'Nunito', 'Segoe UI', sans-serif;
+            background-color: var(--bg-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
+            line-height: 1.6;
         }
 
         .signup-container {
@@ -27,27 +56,95 @@
 
         .card {
             border: none;
-            border-radius: 5px;
-            box-shadow: 0 .15rem 1.75rem 0 rgba(58,59,69,.15);
+            border-radius: 10px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            background-color: var(--bg-secondary);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            box-shadow: 0 6px 24px var(--shadow-color-hover);
         }
 
         .card-header {
-            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+            background: linear-gradient(180deg, var(--primary-color) 0%, #1a252f 100%);
             color: white;
             text-align: center;
             padding: 1.5rem;
-            border-radius: 5px 5px 0 0;
+            border-radius: 10px 10px 0 0;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .card-header h3 {
+            font-weight: 600;
+        }
+
+        .btn {
+            border-radius: 6px;
+            font-weight: 500;
+            padding: 0.75rem;
+            transition: all 0.2s;
         }
 
         .btn-primary {
-            background-color: #4e73df;
-            border-color: #4e73df;
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
             width: 100%;
-            padding: 0.75rem;
+            box-shadow: 0 2px 6px rgba(44, 62, 80, 0.15);
+        }
+
+        .btn-primary:hover {
+            background-color: #1a252f;
+            border-color: #1a252f;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(44, 62, 80, 0.2);
         }
 
         .form-control {
             padding: 0.75rem;
+            border-color: var(--border-color);
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(44, 62, 80, 0.15);
+        }
+
+        .input-group-text {
+            background-color: var(--light-color);
+            border-color: var(--border-color);
+            color: var(--primary-color);
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #1a1a2e;
+                --bg-secondary: #16213e;
+                --text-primary: #e6e6e6;
+                --text-secondary: #b3b3b3;
+                --border-color: #2a2a4a;
+                --shadow-color: rgba(0, 0, 0, 0.2);
+                --shadow-color-hover: rgba(0, 0, 0, 0.3);
+            }
+
+            .input-group-text {
+                background-color: #2a2a4a;
+                border-color: var(--border-color);
+                color: var(--text-primary);
+            }
+
+            .form-control {
+                background-color: var(--bg-secondary);
+                color: var(--text-primary);
+                border-color: var(--border-color);
+            }
+
+            .form-control:focus {
+                background-color: var(--bg-secondary);
+                color: var(--text-primary);
+            }
         }
     </style>
 </head>
