@@ -267,7 +267,8 @@ def index():
     return render_template('index.html', goals=goals, routines=routines, habits=habits,
                           today=date.today().strftime('%Y-%m-%d'),
                           current_user=get_current_user(),
-                          partner=get_partner())
+                          partner=get_partner(),
+                          use_custom_energy_legend=True)
 
 @app.route('/goals')
 @login_required
@@ -356,7 +357,8 @@ def view_routines():
                           today_name=today_name,
                           weekdays=weekdays,
                           current_user=get_current_user(),
-                          partner=get_partner())
+                          partner=get_partner(),
+                          use_custom_energy_legend=True)
 
 @app.route('/routines/add', methods=['GET', 'POST'])
 @login_required
@@ -684,7 +686,8 @@ def analytics():
     conn.close()
 
     return render_template('analytics.html', habit_stats=habit_stats, energy_distribution=energy_distribution,
-                          current_user=get_current_user(), partner=get_partner())
+                          current_user=get_current_user(), partner=get_partner(),
+                          use_custom_energy_legend=True)
 
 # Partner view routes
 @app.route('/partner/habits')

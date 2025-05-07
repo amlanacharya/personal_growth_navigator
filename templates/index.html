@@ -109,10 +109,13 @@
                             <div class="progress-bar medium-energy" role="progressbar" style="width: {{ medium_width }}%"></div>
                             <div class="progress-bar low-energy" role="progressbar" style="width: {{ low_width }}%"></div>
                         </div>
-                        <div class="mb-1 small">
-                            <span class="mr-2"><i class="fas fa-circle text-success"></i> High Energy ({{ high_percent }} min)</span>
-                            <span class="mr-2"><i class="fas fa-circle text-warning"></i> Medium Energy ({{ medium_percent }} min)</span>
-                            <span class="mr-2"><i class="fas fa-circle text-secondary"></i> Low Energy ({{ low_percent }} min)</span>
+                        {% if use_custom_energy_legend %}
+                            {% include 'components/energy_legend.html' %}
+                        {% endif %}
+                        <div class="mb-1 small mt-2">
+                            <span class="mr-2">High Energy ({{ high_percent }} min)</span>
+                            <span class="mr-2">Medium Energy ({{ medium_percent }} min)</span>
+                            <span class="mr-2">Low Energy ({{ low_percent }} min)</span>
                         </div>
 
                         <hr>

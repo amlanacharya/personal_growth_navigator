@@ -141,6 +141,9 @@
                         <div class="mt-4">
                             <h5>Energy Distribution</h5>
                             <canvas id="{{ day|lower }}_energy_chart" height="100"></canvas>
+                            {% if use_custom_energy_legend %}
+                                {% include 'components/energy_legend.html' %}
+                            {% endif %}
                         </div>
                     </div>
                 {% endfor %}
@@ -193,7 +196,7 @@
                     labels: ['High Energy', 'Medium Energy', 'Low Energy'],
                     datasets: [{
                         data: [energyData.high, energyData.medium, energyData.low],
-                        backgroundColor: ['#1cc88a', '#f6c23e', '#e7e7e7'],
+                        backgroundColor: ['#1cc88a', '#f6c23e', '#6c757d'],
                         hoverBorderColor: "rgba(234, 236, 244, 1)",
                     }]
                 },
@@ -210,7 +213,7 @@
                         }
                     },
                     legend: {
-                        position: 'bottom'
+                        display: false
                     }
                 }
             });

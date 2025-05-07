@@ -9,7 +9,7 @@
             <p class="mb-4">Track your progress and see patterns in your habits and routines.</p>
         </div>
     </div>
-    
+
     <div class="row">
         <!-- Habit Completion Chart -->
         <div class="col-xl-8 col-lg-7">
@@ -24,7 +24,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Energy Distribution Chart -->
         <div class="col-xl-4 col-lg-5">
             <div class="card shadow mb-4">
@@ -35,12 +35,15 @@
                     <div class="chart-container">
                         <canvas id="energyDistributionChart"></canvas>
                     </div>
+                    {% if use_custom_energy_legend %}
+                        {% include 'components/energy_legend.html' %}
+                    {% endif %}
                     <div class="mt-4 small">
                         <p>Your daily routine allocates:</p>
                         {% set high_total = 0 %}
                         {% set medium_total = 0 %}
                         {% set low_total = 0 %}
-                        
+
                         {% for energy in energy_distribution %}
                             {% if energy[0] == 'High' %}
                                 {% set high_total = energy[1] %}
@@ -50,7 +53,7 @@
                                 {% set low_total = energy[1] %}
                             {% endif %}
                         {% endfor %}
-                        
+
                         <ul>
                             <li><strong>{{ high_total }} minutes</strong> to high-energy activities</li>
                             <li><strong>{{ medium_total }} minutes</strong> to medium-energy activities</li>
@@ -61,7 +64,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="row">
         <!-- Habit Details Table -->
         <div class="col-12">
@@ -91,11 +94,11 @@
                                             <div class="d-flex align-items-center">
                                                 <div class="me-2">{{ habit.completion_rate }}%</div>
                                                 <div class="progress" style="height: 6px; width: 100px;">
-                                                    <div class="progress-bar {{ 'bg-success' if habit.completion_rate >= 80 else 'bg-warning' if habit.completion_rate >= 50 else 'bg-danger' }}" 
-                                                        role="progressbar" 
-                                                        style="width: {{ habit.completion_rate }}%" 
-                                                        aria-valuenow="{{ habit.completion_rate }}" 
-                                                        aria-valuemin="0" 
+                                                    <div class="progress-bar {{ 'bg-success' if habit.completion_rate >= 80 else 'bg-warning' if habit.completion_rate >= 50 else 'bg-danger' }}"
+                                                        role="progressbar"
+                                                        style="width: {{ habit.completion_rate }}%"
+                                                        aria-valuenow="{{ habit.completion_rate }}"
+                                                        aria-valuemin="0"
                                                         aria-valuemax="100">
                                                     </div>
                                                 </div>
@@ -113,7 +116,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="row">
         <!-- Growth Insights -->
         <div class="col-12">
@@ -135,7 +138,7 @@
                                 <p>Your data shows that you're more successful with habits that are scheduled during your high-energy periods (8-10 AM and 5:30-7:30 PM). Consider scheduling your most important habits during these windows.</p>
                             </div>
                         </div>
-                        
+
                         <div class="d-flex align-items-start mb-4">
                             <div class="me-3">
                                 <div class="p-3 bg-warning text-white rounded-circle">
@@ -147,7 +150,7 @@
                                 <p>You're currently allocating {{ '{:.1f}'.format((high_total / (high_total + medium_total + low_total)) * 100) if (high_total + medium_total + low_total) > 0 else 0 }}% of your day to high-energy activities. For optimal performance, aim for a 30-40% allocation for high-energy focus work.</p>
                             </div>
                         </div>
-                        
+
                         <div class="d-flex align-items-start">
                             <div class="me-3">
                                 <div class="p-3 bg-info text-white rounded-circle">
@@ -213,7 +216,7 @@
                 }
             }
         });
-        
+
         // Energy Distribution Chart
         const energyCtx = document.getElementById('energyDistributionChart').getContext('2d');
         const energyDistributionChart = new Chart(energyCtx, {
@@ -229,12 +232,12 @@
                     backgroundColor: [
                         'rgba(28, 200, 138, 0.8)',
                         'rgba(246, 194, 62, 0.8)',
-                        'rgba(231, 231, 231, 0.8)'
+                        'rgba(108, 117, 125, 0.8)'
                     ],
                     borderColor: [
                         'rgba(28, 200, 138, 1)',
                         'rgba(246, 194, 62, 1)',
-                        'rgba(231, 231, 231, 1)'
+                        'rgba(108, 117, 125, 1)'
                     ],
                     borderWidth: 1
                 }]
@@ -243,7 +246,7 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'bottom'
+                        display: false
                     },
                     tooltip: {
                         callbacks: {
