@@ -15,37 +15,79 @@
         </div>
     </div>
 
+    <!-- Debug Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">All Routines</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User ID</th>
+                                    <th>Time Block</th>
+                                    <th>Activity</th>
+                                    <th>Duration</th>
+                                    <th>Energy Level</th>
+                                    <th>Weekdays</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for routine in routines %}
+                                    <tr>
+                                        <td>{{ routine[0] }}</td>
+                                        <td>{{ routine[1] }}</td>
+                                        <td>{{ routine[2] }}</td>
+                                        <td>{{ routine[3] }}</td>
+                                        <td>{{ routine[4] }}</td>
+                                        <td>{{ routine[5] }}</td>
+                                        <td>{{ routine[6] }}</td>
+                                        <td>
+                                            <a href="{{ url_for('edit_routine', id=routine[0]) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="8" class="text-center">No routines found</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Weekday Tabs -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <ul class="nav nav-tabs card-header-tabs" id="weekdayTabs" role="tablist">
+                {% for day in weekdays %}
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="monday-tab" data-bs-toggle="tab" data-bs-target="#monday" type="button" role="tab" aria-controls="monday" aria-selected="true">Monday</button>
+                    <button class="nav-link {{ 'active' if day == today_name else '' }}"
+                            id="{{ day|lower }}-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#{{ day|lower }}"
+                            type="button"
+                            role="tab"
+                            aria-controls="{{ day|lower }}"
+                            aria-selected="{{ 'true' if day == today_name else 'false' }}">{{ day }}</button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="tuesday-tab" data-bs-toggle="tab" data-bs-target="#tuesday" type="button" role="tab" aria-controls="tuesday" aria-selected="false">Tuesday</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="wednesday-tab" data-bs-toggle="tab" data-bs-target="#wednesday" type="button" role="tab" aria-controls="wednesday" aria-selected="false">Wednesday</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="thursday-tab" data-bs-toggle="tab" data-bs-target="#thursday" type="button" role="tab" aria-controls="thursday" aria-selected="false">Thursday</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="friday-tab" data-bs-toggle="tab" data-bs-target="#friday" type="button" role="tab" aria-controls="friday" aria-selected="false">Friday</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="saturday-tab" data-bs-toggle="tab" data-bs-target="#saturday" type="button" role="tab" aria-controls="saturday" aria-selected="false">Saturday</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="sunday-tab" data-bs-toggle="tab" data-bs-target="#sunday" type="button" role="tab" aria-controls="sunday" aria-selected="false">Sunday</button>
-                </li>
+                {% endfor %}
             </ul>
         </div>
         <div class="card-body">
             <div class="tab-content" id="weekdayTabsContent">
-                {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
-                    <div class="tab-pane fade {{ 'show active' if day == 'Monday' else '' }}" id="{{ day|lower }}" role="tabpanel" aria-labelledby="{{ day|lower }}-tab">
+                {% for day in weekdays %}
+                    <div class="tab-pane fade {{ 'show active' if day == today_name else '' }}" id="{{ day|lower }}" role="tabpanel" aria-labelledby="{{ day|lower }}-tab">
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
@@ -58,31 +100,39 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for routine in routines %}
-                                        {% if day in routine[5].split(',') %}
-                                            <tr>
-                                                <td>{{ routine[1] }}</td>
-                                                <td>{{ routine[2] }}</td>
-                                                <td>
-                                                    {% if routine[3]|int > 0 %}
-                                                        {{ routine[3]|int }} minutes
-                                                    {% else %}
-                                                        -
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-{{ 'success' if routine[4] == 'High' else 'warning' if routine[4] == 'Medium' else 'secondary' }}">
-                                                        {{ routine[4] }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <a href="{{ url_for('edit_routine', id=routine[0]) }}" class="btn btn-sm btn-primary">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        {% endif %}
-                                    {% endfor %}
+                                    {% if routines %}
+                                        {% for routine in routines %}
+                                            {% if day in routine[6].split(',') %}
+                                                <tr>
+                                                    <td>{{ routine[2] }}</td>
+                                                    <td>{{ routine[3] }}</td>
+                                                    <td>
+                                                        {% if routine[4]|int > 0 %}
+                                                            {{ routine[4]|int }} minutes
+                                                        {% else %}
+                                                            -
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-{{ 'success' if routine[5] == 'High' else 'warning' if routine[5] == 'Medium' else 'secondary' }}">
+                                                            {{ routine[5] }}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('edit_routine', id=routine[0]) }}" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4">
+                                                <p class="text-muted mb-0">No routines added for {{ day }} yet.</p>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>
@@ -115,9 +165,9 @@
             const routines = [
                 {% for routine in routines %}
                 {
-                    days: "{{ routine[5] }}",
-                    energy: "{{ routine[4] }}",
-                    duration: {{ routine[3]|int }}
+                    days: "{{ routine[6] }}",
+                    energy: "{{ routine[5] }}",
+                    duration: {{ routine[4]|int }}
                 },
                 {% endfor %}
             ];

@@ -15,6 +15,59 @@
         </div>
     </div>
 
+    <!-- Debug Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">All Habits</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User ID</th>
+                                    <th>Name</th>
+                                    <th>Goal ID</th>
+                                    <th>Frequency</th>
+                                    <th>Streak</th>
+                                    <th>Created At</th>
+                                    <th>Goal Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for habit in habits %}
+                                    <tr>
+                                        <td>{{ habit[0] }}</td>
+                                        <td>{{ habit[1] }}</td>
+                                        <td>{{ habit[2] }}</td>
+                                        <td>{{ habit[3] }}</td>
+                                        <td>{{ habit[4] }}</td>
+                                        <td>{{ habit[5] }}</td>
+                                        <td>{{ habit[6] }}</td>
+                                        <td>{{ habit[7] if habit|length > 7 else 'N/A' }}</td>
+                                        <td>
+                                            <a href="{{ url_for('edit_habit', id=habit[0]) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="9" class="text-center">No habits found</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Habits List -->
         <div class="col-xl-8 col-lg-7">
@@ -38,7 +91,7 @@
                                 <tbody>
                                     {% for habit in habits %}
                                         <tr>
-                                            <td>{{ habit[1] }}</td>
+                                            <td>{{ habit[2] }}</td>
                                             <td>
                                                 {% if habit[7] %}
                                                     {{ habit[7] }}
@@ -46,9 +99,9 @@
                                                     <span class="text-muted">None</span>
                                                 {% endif %}
                                             </td>
-                                            <td>{{ habit[3]|capitalize }}</td>
+                                            <td>{{ habit[4]|capitalize }}</td>
                                             <td>
-                                                <span class="badge bg-primary">{{ habit[4]|int }} days</span>
+                                                <span class="badge bg-primary">{{ habit[5]|int }} days</span>
                                             </td>
                                             <td>
                                                 <form action="{{ url_for('log_habit', id=habit[0]) }}" method="post" class="d-inline">
@@ -98,12 +151,12 @@
                         <div class="habit-streaks">
                             {% for habit in habits %}
                                 <div class="mb-4">
-                                    <h6>{{ habit[1] }}</h6>
+                                    <h6>{{ habit[2] }}</h6>
                                     <div class="progress mb-1">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (habit[4]|int / 30) * 100 if habit[4]|int < 30 else 100 }}%" aria-valuenow="{{ habit[4]|int }}" aria-valuemin="0" aria-valuemax="30"></div>
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (habit[5]|int / 30) * 100 if habit[5]|int < 30 else 100 }}%" aria-valuenow="{{ habit[5]|int }}" aria-valuemin="0" aria-valuemax="30"></div>
                                     </div>
                                     <div class="d-flex justify-content-between small text-muted">
-                                        <div>Current streak: {{ habit[4]|int }} days</div>
+                                        <div>Current streak: {{ habit[5]|int }} days</div>
                                         <div>Goal: 30 days</div>
                                     </div>
                                 </div>

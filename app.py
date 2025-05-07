@@ -275,6 +275,10 @@ def view_goals():
     user_id = session['user_id']
     conn = get_db_connection()
     goals = conn.execute('SELECT * FROM goals WHERE user_id = ? ORDER BY priority', (user_id,)).fetchall()
+
+    # Debug: Print goals to console
+    print(f"DEBUG - Goals for user {user_id}: {goals}")
+
     conn.close()
     return render_template('goals.html', goals=goals, current_user=get_current_user(), partner=get_partner())
 
@@ -335,8 +339,24 @@ def view_routines():
     user_id = session['user_id']
     conn = get_db_connection()
     routines = conn.execute('SELECT * FROM routines WHERE user_id = ? ORDER BY time_block', (user_id,)).fetchall()
+
+    # Debug: Print routines to console
+    print(f"DEBUG - Routines for user {user_id}: {routines}")
+
     conn.close()
-    return render_template('routines.html', routines=routines, current_user=get_current_user(), partner=get_partner())
+
+    # Get current day of the week
+    today_name = datetime.now().strftime('%A')
+
+    # Pass all weekdays and highlight the current day
+    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+    return render_template('routines.html',
+                          routines=routines,
+                          today_name=today_name,
+                          weekdays=weekdays,
+                          current_user=get_current_user(),
+                          partner=get_partner())
 
 @app.route('/routines/add', methods=['GET', 'POST'])
 @login_required
@@ -404,6 +424,9 @@ def view_habits():
         ORDER BY h.name
     ''', (user_id,)).fetchall()
 
+    # Debug: Print habits to console
+    print(f"DEBUG - Habits for user {user_id}: {habits}")
+
     # Get completion data for calendar view
     habit_logs = conn.execute('''
         SELECT hl.habit_id, hl.completed_date, COUNT(*) as count
@@ -423,6 +446,9 @@ def view_habits():
             calendar_data[habit_id] = []
 
         calendar_data[habit_id].append(completed_date)
+
+    # Debug: Print calendar data
+    print(f"DEBUG - Calendar data: {calendar_data}")
 
     conn.close()
 
@@ -655,6 +681,29 @@ def view_partner_habits():
                           today=date.today().strftime('%Y-%m-%d'),
                           current_user=get_current_user(),
                           partner=get_partner())
+
+# Debug route
+@app.route('/debug')
+@login_required
+def debug():
+    user_id = session['user_id']
+    conn = get_db_connection()
+
+    # Get all data for the current user
+    goals = conn.execute('SELECT * FROM goals WHERE user_id = ? ORDER BY priority', (user_id,)).fetchall()
+    routines = conn.execute('SELECT * FROM routines WHERE user_id = ? ORDER BY time_block', (user_id,)).fetchall()
+    habits = conn.execute('''
+        SELECT h.*, g.description as goal_description
+        FROM habits h
+        LEFT JOIN goals g ON h.goal_id = g.id
+        WHERE h.user_id = ?
+        ORDER BY h.name
+    ''', (user_id,)).fetchall()
+
+    conn.close()
+
+    return render_template('debug.html', goals=goals, routines=routines, habits=habits,
+                          current_user=get_current_user(), partner=get_partner())
 
 # AI Roadmap routes
 @app.route('/ai_roadmap')
