@@ -22,7 +22,10 @@ class NotificationScheduler:
         self.running = False
         self.thread = None
         self.notification_helper = AINotificationHelper()
-        self.db_path = 'instance/growth_navigator.db'
+
+        # Get the database path from the configuration
+        from config.config import DATABASE
+        self.db_path = DATABASE
 
     def start(self):
         """Start the notification scheduler."""

@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from config.config import DATABASE
 
 def update_database_schema_for_mood():
     """
@@ -7,12 +8,12 @@ def update_database_schema_for_mood():
     This script adds a new table for mood tracking.
     """
     # Connect to the database
-    conn = sqlite3.connect('growth_navigator.db')
+    conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
     # Check if database exists
-    if not os.path.exists('growth_navigator.db'):
-        print("Database does not exist. Please run the application first to create it.")
+    if not os.path.exists(DATABASE):
+        print(f"Database does not exist at {DATABASE}. Please run the application first to create it.")
         return
 
     try:

@@ -1,20 +1,21 @@
 import sqlite3
 import os
 from datetime import datetime
+from config.config import DATABASE
 
 def update_database_schema_for_ai_notifications():
     """
     Update the database schema to add tables for AI notifications.
     """
     # Check if database exists
-    if not os.path.exists('growth_navigator.db'):
-        print("Database does not exist. Please run the main application first.")
+    if not os.path.exists(DATABASE):
+        print(f"Database does not exist at {DATABASE}. Please run the main application first.")
         return
-    
+
     # Connect to the database
-    conn = sqlite3.connect('growth_navigator.db')
+    conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    
+
     try:
         # Check if ai_notifications table already exists
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_notifications'")
@@ -40,7 +41,7 @@ def update_database_schema_for_ai_notifications():
             )
             ''')
             print("Created ai_notifications table")
-        
+
         # Check if ai_notification_settings table already exists
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_notification_settings'")
         if cursor.fetchone() is None:
@@ -63,7 +64,7 @@ def update_database_schema_for_ai_notifications():
             )
             ''')
             print("Created ai_notification_settings table")
-        
+
         # Check if ai_notification_triggers table already exists
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_notification_triggers'")
         if cursor.fetchone() is None:
@@ -84,7 +85,7 @@ def update_database_schema_for_ai_notifications():
             )
             ''')
             print("Created ai_notification_triggers table")
-            
+
             # Insert default notification triggers
             default_triggers = [
                 (
@@ -148,19 +149,19 @@ def update_database_schema_for_ai_notifications():
                     None
                 )
             ]
-            
+
             cursor.executemany('''
-            INSERT INTO ai_notification_triggers 
+            INSERT INTO ai_notification_triggers
             (name, description, type, conditions, template_title, template_message, template_actions, enabled, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', default_triggers)
-            
+
             print("Inserted default notification triggers")
-        
+
         # Commit the changes
         conn.commit()
         print("Database schema updated successfully for AI notifications")
-        
+
     except Exception as e:
         conn.rollback()
         print(f"Error updating database schema: {e}")
