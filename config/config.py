@@ -20,7 +20,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_key_for_development_only')
 TESTING = False
 
 # Database configuration
-DATABASE = os.path.join(BASE_DIR, 'growth_navigator.db')
+DATABASE = os.path.join(BASE_DIR, 'instance', 'growth_navigator.db')
 
 # AI configuration
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')

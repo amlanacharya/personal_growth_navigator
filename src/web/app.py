@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import schema_updates_mood
 import schema_updates_ai_notifications
 import schema_updates_scheduled_notifications
-from notification_scheduler import start_notification_scheduler
+# from notification_scheduler import start_notification_scheduler
 
 def create_app(test_config=None):
     """Create and configure the Flask application."""
@@ -69,7 +69,7 @@ def create_app(test_config=None):
     schema_updates_ai_notifications.update_database_schema_for_ai_notifications()
     schema_updates_scheduled_notifications.update_database_schema_for_scheduled_notifications()
 
-    # Start the notification scheduler
-    start_notification_scheduler()
+    # Start the notification scheduler (temporarily disabled)
+    # start_notification_scheduler()
 
     return app
