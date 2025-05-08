@@ -692,6 +692,11 @@
                     </div>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {% if '/ai_insights' in request.path and not '/ai_insights/' in request.path %}active{% endif %}" href="{{ url_for('ai_insights_dashboard') }}">
+                        <i class="fas fa-lightbulb"></i> AI Insights
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {% if '/ai_roadmap' in request.path %}active{% endif %}" href="{{ url_for('ai_roadmap') }}">
                         <i class="fas fa-map"></i> AI Roadmap
                     </a>
@@ -784,7 +789,7 @@
             <a href="{{ url_for('ai_roadmap') }}" class="quick-action-item">
                 <i class="fas fa-robot"></i> AI Chat
             </a>
-            <a href="{{ url_for('get_ai_insights') }}" class="quick-action-item">
+            <a href="{{ url_for('ai_insights_dashboard') }}" class="quick-action-item">
                 <i class="fas fa-lightbulb"></i> AI Insights
             </a>
         </div>

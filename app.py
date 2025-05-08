@@ -12,12 +12,33 @@ from ai_insights_helper import AIInsightsHelper
 from ai_notification_helper import AINotificationHelper
 import schema_updates_mood
 import schema_updates_ai_notifications
+import schema_updates_scheduled_notifications
+from notification_scheduler import start_notification_scheduler
 app = Flask(__name__)
 app.secret_key = "personal_growth_navigator_secret_key"
 
-# Update database schema for mood tracking and AI notifications
+# Make datetime available to all templates
+app.jinja_env.globals['datetime'] = datetime
+
+# Custom Jinja2 filters
+@app.template_filter('datetime_format')
+def datetime_format_filter(value):
+    """Format a datetime string to a more readable format."""
+    if not value:
+        return ""
+    try:
+        dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        return dt.strftime('%b %d, %Y at %I:%M %p')
+    except ValueError:
+        return value
+
+# Update database schema for mood tracking, AI notifications, and scheduled notifications
 schema_updates_mood.update_database_schema_for_mood()
 schema_updates_ai_notifications.update_database_schema_for_ai_notifications()
+schema_updates_scheduled_notifications.update_database_schema_for_scheduled_notifications()
+
+# Start the notification scheduler
+start_notification_scheduler()
 
 # Create .env file if it doesn't exist
 create_env_file()
@@ -1485,6 +1506,14 @@ def weekly_summary():
                           dashboard_url=dashboard_url)
 
 # AI Insights routes
+@app.route('/ai_insights')
+@login_required
+def ai_insights_dashboard():
+    """Render the AI Insights Dashboard."""
+    return render_template('ai_insights_dashboard.html',
+                          current_user=get_current_user(),
+                          partner=get_partner())
+
 @app.route('/get_ai_insights')
 @login_required
 def get_ai_insights():
@@ -1629,6 +1658,7 @@ Format your response in a supportive, empathetic tone."""
     return render_template('ai_mood_suggestions.html',
                           mood_data=mood_data,
                           suggestions=suggestions,
+                          now=datetime.now(),
                           current_user=get_current_user(),
                           partner=get_partner())
 
@@ -1868,6 +1898,129 @@ def check_notifications():
     return jsonify({
         'new_notifications': new_notifications
     })
+
+# Push Notification API routes
+@app.route('/api/push-public-key')
+@login_required
+def get_push_public_key():
+    """Get the public key for push notifications."""
+    # In a real implementation, this would be a proper VAPID public key
+    # For now, we'll use a placeholder
+    return jsonify({
+        'publicKey': 'BLc4xRzKlKORovVrI_ij68zPnzUKOJrY-Ii2lCW2PrZpLOTd8sJRnqNvCwyBb-wSaS7pFKXJib2Dj_Qxp6Y3VdM'
+    })
+
+@app.route('/api/push-subscribe', methods=['POST'])
+@login_required
+def push_subscribe():
+    """Subscribe to push notifications."""
+    user_id = session['user_id']
+
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'Invalid request format'}), 400
+
+    subscription = request.json.get('subscription')
+    if not subscription:
+        return jsonify({'success': False, 'error': 'Missing subscription data'}), 400
+
+    # Save subscription to database
+    conn = get_db_connection()
+
+    try:
+        # Check if subscription already exists
+        existing = conn.execute('''
+            SELECT id FROM push_notification_subscriptions
+            WHERE user_id = ? AND endpoint = ?
+        ''', (user_id, subscription.get('endpoint'))).fetchone()
+
+        if existing:
+            # Update existing subscription
+            conn.execute('''
+                UPDATE push_notification_subscriptions
+                SET p256dh = ?, auth = ?, updated_at = ?
+                WHERE user_id = ? AND endpoint = ?
+            ''', (
+                subscription.get('keys', {}).get('p256dh', ''),
+                subscription.get('keys', {}).get('auth', ''),
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                user_id,
+                subscription.get('endpoint')
+            ))
+        else:
+            # Create new subscription
+            conn.execute('''
+                INSERT INTO push_notification_subscriptions
+                (user_id, endpoint, p256dh, auth, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                user_id,
+                subscription.get('endpoint', ''),
+                subscription.get('keys', {}).get('p256dh', ''),
+                subscription.get('keys', {}).get('auth', ''),
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            ))
+
+        # Update user settings to enable push notifications
+        helper = get_ai_notification_helper()
+        settings = helper.get_user_notification_settings(user_id)
+        settings['push_notifications'] = True
+        helper.update_user_notification_settings(user_id, settings)
+
+        conn.commit()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        print(f"Error subscribing to push notifications: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    finally:
+        conn.close()
+
+@app.route('/api/push-unsubscribe', methods=['POST'])
+@login_required
+def push_unsubscribe():
+    """Unsubscribe from push notifications."""
+    user_id = session['user_id']
+
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'Invalid request format'}), 400
+
+    subscription = request.json.get('subscription')
+    if not subscription:
+        return jsonify({'success': False, 'error': 'Missing subscription data'}), 400
+
+    # Remove subscription from database
+    conn = get_db_connection()
+
+    try:
+        conn.execute('''
+            DELETE FROM push_notification_subscriptions
+            WHERE user_id = ? AND endpoint = ?
+        ''', (user_id, subscription.get('endpoint')))
+
+        # Update user settings to disable push notifications if no subscriptions remain
+        remaining = conn.execute('''
+            SELECT COUNT(*) as count FROM push_notification_subscriptions
+            WHERE user_id = ?
+        ''', (user_id,)).fetchone()[0]
+
+        if remaining == 0:
+            helper = get_ai_notification_helper()
+            settings = helper.get_user_notification_settings(user_id)
+            settings['push_notifications'] = False
+            helper.update_user_notification_settings(user_id, settings)
+
+        conn.commit()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        print(f"Error unsubscribing from push notifications: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    finally:
+        conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True)
